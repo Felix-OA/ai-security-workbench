@@ -122,13 +122,20 @@ Use this tool only on systems you own or have explicit permission to test.
 
 ## Screenshots
 
-Screenshots will be added after the final local demo pass. Recommended captures:
+### Landing Page
+![Landing Page](docs/screenshots/landing-page.png)
 
-- `/dashboard`
-- `/tests?category=Prompt%20Injection`
-- `/projects/sample-project`
-- `/projects/sample-project/dashboard`
-- `/projects/sample-project/report`
+### Dashboard
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Test Library
+![Test Library](docs/screenshots/test-library.png)
+
+### Project Dashboard
+![Project Dashboard](docs/screenshots/project-dashboard.png)
+
+### Report Generator
+![Report Generator](docs/screenshots/report-generator.png)
 
 ## Quality Checks
 
