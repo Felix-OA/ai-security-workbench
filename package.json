@@ -1,0 +1,22 @@
+{
+  "name": "ai-security-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --loader ts-node/esm src/server.ts",
+    "start": "node --loader ts-node/esm src/server.ts",
+    "db:seed": "node --loader ts-node/esm src/seed-workbench.ts",
+    "test": "node --loader ts-node/esm --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}

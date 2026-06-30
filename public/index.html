@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Security Workbench</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a class="brand" href="#/">
+        <span class="brand-mark">AI</span>
+        <span>
+          <strong>AI Security Workbench</strong>
+          <small>Authorized testing only</small>
+        </span>
+      </a>
+      <nav>
+        <a href="#/dashboard" data-nav="dashboard">Dashboard</a>
+        <a href="#/projects" data-nav="projects">Projects</a>
+        <a href="#/tests" data-nav="tests">Test Library</a>
+        <a href="#/sample-report" data-nav="sample-report">Sample Report</a>
+        <a href="#/about" data-nav="about">About</a>
+      </nav>
+      <p class="guardrail">Use this tool only on systems you own or have explicit permission to test.</p>
+    </aside>
+
+    <div class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Red Team Test Library + Report Generator</p>
+          <h1 id="page-title">AI Security Workbench</h1>
+        </div>
+        <div class="topbar-actions" id="topbar-actions"></div>
+      </header>
+      <main id="app" class="view" tabindex="-1"></main>
+    </div>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
