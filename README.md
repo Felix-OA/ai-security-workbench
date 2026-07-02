@@ -4,7 +4,7 @@ A local web app for documenting authorized LLM red team tests, scoring findings,
 
 ## Overview
 
-**AI Security Workbench v1** is a defensive portfolio project for structured AI security assessments. The first module, **Red Team Test Library + Report Generator**, helps users manage reusable LLM security tests, attach them to assessment projects, record manual results, score risk, and export a professional Markdown report.
+**AI Security Workbench** is a defensive portfolio project for structured AI security assessments. Module 1, **Red Team Test Library + Report Generator**, helps users manage reusable LLM security tests, attach them to assessment projects, record manual results, score risk, and export a professional Markdown report. Module 2, **Prompt Injection Playground**, adds a controlled simulator for documenting authorized prompt injection scenarios and saving findings into project reports.
 
 ## Who It Is For
 
@@ -18,9 +18,29 @@ A local web app for documenting authorized LLM red team tests, scoring findings,
 - Reusable red team test library with categories, severity, OWASP-style mapping, tags, and evaluation rubric fields.
 - Assessment projects with scope, objective, system type, status, tester, and authorization confirmation.
 - Test result workflow for prompt/input, observed response, status, likelihood, impact, evidence, recommendations, and retest status.
+- Prompt Injection Playground with scenario templates, system prompt/intended behavior setup, user prompt input, simulated retrieved context, manual observed response capture, live risk preview, and save-to-project flow.
 - Project and portfolio dashboards with risk scores, status distribution, severity distribution, category breakdown, and top findings.
 - AI Risk Snapshot report generator with rendered browser preview, copy Markdown, download Markdown, and print support.
-- Seeded demo data with 15 AI security test cases and a sample customer support assistant assessment.
+- Seeded demo data with 15 AI security test cases, 8 prompt injection scenarios, and a sample customer support assistant assessment.
+
+OWASP-style mappings use 2025 GenAI/LLM Top 10-style labels for practical guidance. Review mappings against the latest OWASP GenAI Top 10 before using the output in a formal assessment.
+
+## Module 2: Prompt Injection Playground
+
+The Prompt Injection Playground allows users to prepare authorized prompt injection scenarios, document expected behavior, paste observed responses from the AI system being tested, evaluate outcomes, and save findings into project reports. It does not call an LLM directly.
+
+Key features:
+
+- System prompt / intended behavior setup.
+- User prompt input.
+- Simulated retrieved document, tool output, or context.
+- Scenario templates for direct override, RAG context injection, tool output injection, role confusion, leakage attempts, and output handling probes.
+- Manual observed response capture from the tested AI system.
+- Pass/fail/partial evaluation.
+- Risk score preview.
+- Save run to project.
+- Save scenario as reusable test case.
+- Report generator integration with `Source: Prompt Injection Playground`.
 
 ## Demo Workflow
 
@@ -31,9 +51,11 @@ A local web app for documenting authorized LLM red team tests, scoring findings,
 5. Use the test in an existing project.
 6. Add multiple tests from the library with filters and select-all-visible.
 7. Edit a failed result and review the calculated risk score.
-8. Open the project dashboard.
-9. Generate the AI Risk Snapshot report.
-10. Copy or download the Markdown report.
+8. Open the Prompt Injection Playground and load a seeded scenario.
+9. Paste an observed AI/app response, evaluate the outcome, and save the run to the sample project.
+10. Open the project dashboard.
+11. Generate the AI Risk Snapshot report.
+12. Copy or download the Markdown report.
 
 ## Tech Stack
 
@@ -42,7 +64,7 @@ A local web app for documenting authorized LLM red team tests, scoring findings,
 - TypeScript
 - Vanilla HTML/CSS/JavaScript frontend
 - Local JSON persistence in `data/db.json`
-- Node test runner for scoring logic
+- Node test runner for scoring, seed data, reports, and Playground save flows
 
 This v1 intentionally keeps the current lightweight architecture. A future version can migrate to Next.js, Prisma, SQLite, and a component framework after the product workflow is stable.
 
@@ -67,6 +89,7 @@ npm run db:seed
 The seed creates:
 
 - 15 reusable AI red team test cases.
+- 8 prompt injection playground scenarios.
 - 1 demo project: `Demo Assessment - Customer Support AI Assistant`.
 - 8 attached test results with passed, failed, and partial outcomes.
 
@@ -122,20 +145,39 @@ Use this tool only on systems you own or have explicit permission to test.
 
 ## Screenshots
 
-### Landing Page
+### Module 1: Red Team Test Library + Report Generator
+
+#### Landing Page
 ![Landing Page](docs/screenshots/landing-page.png)
 
-### Dashboard
+#### Dashboard
 ![Dashboard](docs/screenshots/dashboard.png)
 
-### Test Library
+#### Test Library
 ![Test Library](docs/screenshots/test-library.png)
 
-### Project Dashboard
+#### Project Dashboard
 ![Project Dashboard](docs/screenshots/project-dashboard.png)
 
-### Report Generator
+#### Report Generator
 ![Report Generator](docs/screenshots/report-generator.png)
+
+### Module 2: Prompt Injection Playground
+
+#### Playground Main Screen with Authorization Notice
+![Playground Main Screen with Authorization Notice](docs/screenshots/module-2/01-playground-main-auth-notice.png)
+
+#### Loaded Malicious Retrieved Document Scenario
+![Loaded Malicious Retrieved Document Scenario](docs/screenshots/module-2/02-loaded-malicious-retrieved-document-scenario.png)
+
+#### Failed Evaluation with Live Risk Score
+![Failed Evaluation with Live Risk Score](docs/screenshots/module-2/03-failed-evaluation-risk-score.png)
+
+#### Project Result Showing Source: Playground
+![Project Result Showing Source Playground](docs/screenshots/module-2/04-project-result-source-playground.png)
+
+#### Report Preview Showing Source: Prompt Injection Playground
+![Report Preview Showing Source Prompt Injection Playground](docs/screenshots/module-2/05-report-source-prompt-injection-playground.png)
 
 ## Quality Checks
 
@@ -152,6 +194,5 @@ npm run typecheck
 - Evidence attachment workflow.
 - Test library versioning.
 - Optional model API integration for authorized local evaluations.
-- Prompt Injection Playground.
 - RAG Attack Lab.
 - Multi-user workspaces.

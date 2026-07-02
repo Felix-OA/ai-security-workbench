@@ -61,7 +61,7 @@ export function generateRiskSnapshotReport(project: Project, results: TestResult
   const findingRows = results
     .map((result, index) => {
       const name = testName(result, tests);
-      return `| ${tableCell(`F-${String(index + 1).padStart(3, "0")}`)} | ${tableCell(name)} | ${tableCell(result.category)} | ${tableCell(result.severity)} | ${tableCell(result.resultStatus)} | ${tableCell(result.riskScore.toFixed(1))} | ${tableCell(clean(result.recommendation, "Document remediation."))} |`;
+      return `| ${tableCell(`F-${String(index + 1).padStart(3, "0")}`)} | ${tableCell(name)} | ${tableCell(result.source || "Test Library")} | ${tableCell(result.category)} | ${tableCell(result.severity)} | ${tableCell(result.resultStatus)} | ${tableCell(result.riskScore.toFixed(1))} | ${tableCell(clean(result.recommendation, "Document remediation."))} |`;
     })
     .join("\n");
 
@@ -70,10 +70,24 @@ export function generateRiskSnapshotReport(project: Project, results: TestResult
     .map((result, index) => {
       const name = testName(result, tests);
       const test = tests.find((item) => item.id === result.testCaseId);
+      const playgroundContext =
+        result.source === "Prompt Injection Playground"
+          ? `Source: Prompt Injection Playground
+Scenario Type: ${clean(result.scenarioType)}
+
+System Prompt / Intended Behavior:
+${clean(result.systemPrompt)}
+
+Retrieved Context Summary:
+${clean(result.retrievedContext, "No retrieved context documented.")}
+`
+          : `Source: ${clean(result.source, "Test Library")}`;
       return `### Finding ${index + 1}: ${name}
 
+${playgroundContext}
+
 Category: ${result.category}
-OWASP Mapping: ${result.owaspMapping}
+OWASP-style Mapping: ${result.owaspMapping}
 Severity: ${result.severity}
 Likelihood: ${result.likelihood}
 Impact: ${result.impact}
@@ -94,7 +108,7 @@ Recommendation:
 ${clean(result.recommendation)}
 
 Evaluation Criteria:
-${clean(test?.evaluationCriteria, "Compare observed behavior against the expected behavior and failure indicators.")}
+${clean(result.evaluationCriteria || test?.evaluationCriteria, "Compare observed behavior against the expected behavior and failure indicators.")}
 
 Evidence Guidance:
 ${clean(test?.evidenceGuidance, "Record prompt/input, observed behavior, date tested, environment, and supporting evidence.")}
@@ -107,7 +121,7 @@ ${clean(result.retestStatus, "Not Retested")}`;
   const appendix = results
     .map((result) => {
       const test = tests.find((item) => item.id === result.testCaseId);
-      return `- ${testName(result, tests)} (${result.category}; ${test?.testType || "Custom test"})`;
+      return `- ${testName(result, tests)} (${result.category}; ${result.source || test?.testType || "Custom test"})`;
     })
     .join("\n");
 
@@ -136,7 +150,9 @@ ${clean(project.outOfScope)}
 
 ## Methodology
 
-This assessment used a structured AI red team test library mapped to common LLM application risk categories. Each test was manually executed and documented with observed behavior, severity, likelihood, impact, and recommended remediation.
+This assessment used a structured AI red team test library mapped to common LLM application risk categories and OWASP-style GenAI risk labels. Each test was manually executed and documented with observed behavior, severity, likelihood, impact, and recommended remediation.
+
+OWASP-style mappings are intended as practical guidance and should be reviewed against the latest OWASP GenAI Top 10 before formal assessments.
 
 Results were scored using severity, likelihood, impact, and observed result status. Passed, failed, and partial results are included in the project risk denominator; not tested and not applicable items are excluded. Risk scores are directional indicators for documented tests, not guarantees that the AI system is secure.
 
@@ -153,9 +169,9 @@ Results were scored using severity, likelihood, impact, and observed result stat
 
 ## Findings Summary
 
-| ID | Finding | Category | Severity | Status | Risk Score | Recommendation |
-| -- | ------- | -------- | -------- | ------ | ---------- | -------------- |
-${findingRows || "| - | No tests selected | - | - | - | - | - |"}
+| ID | Finding | Source | Category | Severity | Status | Risk Score | Recommendation |
+| -- | ------- | ------ | -------- | -------- | ------ | ---------- | -------------- |
+${findingRows || "| - | No tests selected | - | - | - | - | - | - |"}
 
 ## Detailed Findings
 

@@ -191,6 +191,11 @@ nav a.active {
   line-height: 1.45;
 }
 
+.notice-compact {
+  padding: 10px 12px;
+  font-size: 0.88rem;
+}
+
 .section {
   display: grid;
   gap: 16px;
@@ -352,7 +357,7 @@ input,
 select,
 textarea {
   width: 100%;
-  min-height: 38px;
+  min-height: 40px;
   padding: 9px 10px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
@@ -361,17 +366,41 @@ textarea {
   font: inherit;
 }
 
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 3px solid rgba(29, 78, 216, 0.16);
+  border-color: var(--primary);
+}
+
+select {
+  height: 40px;
+}
+
 textarea {
   min-height: 96px;
   resize: vertical;
 }
 
+.textarea-compact {
+  min-height: 78px;
+}
+
+.textarea-tall {
+  min-height: 122px;
+}
+
 label {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   color: #344054;
   font-size: 0.88rem;
   font-weight: 700;
+}
+
+label small {
+  line-height: 1.35;
+  font-weight: 650;
 }
 
 .check {
@@ -391,6 +420,10 @@ label {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.compact-form-grid {
+  gap: 12px;
 }
 
 .field-wide {
@@ -539,10 +572,154 @@ td {
   gap: 12px;
 }
 
+.sticky-panel {
+  position: sticky;
+  top: 106px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
 .score {
   font-size: 3.4rem;
   line-height: 1;
   font-weight: 850;
+}
+
+.playground-intro {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid #bfd4ff;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+  box-shadow: var(--shadow);
+}
+
+.playground-intro h2 {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+}
+
+.playground-intro p {
+  max-width: 900px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.workflow-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.playground-main,
+.evaluation-column {
+  align-self: start;
+}
+
+.playground-section {
+  display: grid;
+  gap: 16px;
+  border-color: #ccd9ea;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.compact-head {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  align-items: start;
+}
+
+.compact-head h2 {
+  font-size: 1.08rem;
+}
+
+.compact-head p {
+  max-width: 720px;
+  font-size: 0.9rem;
+}
+
+.playground-table-section {
+  margin-bottom: 0;
+}
+
+.evaluation-panel {
+  gap: 12px;
+  border-color: #c7d7ee;
+}
+
+.evaluation-header {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.evaluation-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.evaluation-header p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: 0.9rem;
+}
+
+.eval-block {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.eval-block h3 {
+  margin: 0;
+  color: #2e3b4f;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.eval-block p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.eval-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.risk-score-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #bed1ec;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.risk-score-card .score {
+  margin-top: 2px;
+  font-size: 2.45rem;
+}
+
+.action-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.action-stack button {
+  width: 100%;
 }
 
 .meter-track {

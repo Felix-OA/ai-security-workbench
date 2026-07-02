@@ -15,6 +15,7 @@ __pycache__/
 *.pyc
 
 outputs/
+output/
 tmp/
 
 # Legacy local experiments/artifacts kept out of the portfolio app repo.

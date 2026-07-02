@@ -46,6 +46,12 @@ export type TestResult = {
   id: string;
   projectId: string;
   testCaseId: string;
+  source: "Test Library" | "Prompt Injection Playground" | "Custom";
+  playgroundRunId: string;
+  scenarioType: string;
+  systemPrompt: string;
+  retrievedContext: string;
+  evaluationCriteria: string;
   customTestName: string;
   category: string;
   owaspMapping: string;
@@ -66,10 +72,63 @@ export type TestResult = {
   updatedAt: string;
 };
 
+export type PromptInjectionScenario = {
+  id: string;
+  name: string;
+  description: string;
+  scenarioType: string;
+  category: string;
+  owaspMapping: string;
+  severity: string;
+  systemPrompt: string;
+  userPrompt: string;
+  retrievedContext: string;
+  expectedSafeBehavior: string;
+  failureIndicators: string;
+  evaluationCriteria: string;
+  passCondition: string;
+  partialCondition: string;
+  failCondition: string;
+  recommendedMitigation: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PlaygroundRun = {
+  id: string;
+  scenarioId: string;
+  projectId: string;
+  testResultId: string;
+  name: string;
+  scenarioType: string;
+  category: string;
+  owaspMapping: string;
+  severity: string;
+  systemPrompt: string;
+  userPrompt: string;
+  retrievedContext: string;
+  expectedSafeBehavior: string;
+  failureIndicators: string;
+  evaluationCriteria: string;
+  actualResponse: string;
+  resultStatus: string;
+  likelihood: string;
+  impact: string;
+  riskScore: number;
+  evidenceNotes: string;
+  recommendation: string;
+  testerNotes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Db = {
   testCases: TestCase[];
   projects: Project[];
   testResults: TestResult[];
+  promptInjectionScenarios: PromptInjectionScenario[];
+  playgroundRuns: PlaygroundRun[];
 };
 
 const dbPath = path.join(process.cwd(), "data", "db.json");
@@ -78,7 +137,9 @@ function defaultDb(): Db {
   return {
     testCases: [],
     projects: [],
-    testResults: []
+    testResults: [],
+    promptInjectionScenarios: [],
+    playgroundRuns: []
   };
 }
 
@@ -94,7 +155,17 @@ export async function readDb(): Promise<Db> {
   const merged: Db = {
     testCases: source.testCases || [],
     projects: source.projects || [],
-    testResults: source.testResults || []
+    testResults: (source.testResults || []).map((result) => ({
+      ...result,
+      source: result.source || "Test Library",
+      playgroundRunId: result.playgroundRunId || "",
+      scenarioType: result.scenarioType || "",
+      systemPrompt: result.systemPrompt || "",
+      retrievedContext: result.retrievedContext || "",
+      evaluationCriteria: result.evaluationCriteria || ""
+    })) as TestResult[],
+    promptInjectionScenarios: source.promptInjectionScenarios || [],
+    playgroundRuns: source.playgroundRuns || []
   };
   return merged;
 }

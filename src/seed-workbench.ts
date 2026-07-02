@@ -5,5 +5,5 @@ const db = createSeedWorkbenchDb();
 await writeDb(db);
 
 console.log(
-  `Seeded ${db.testCases.length} test cases, ${db.projects.length} project, and ${db.testResults.length} test results.`
+  `Seeded ${db.testCases.length} test cases, ${db.promptInjectionScenarios.length} playground scenarios, ${db.projects.length} project, and ${db.testResults.length} test results.`
 );

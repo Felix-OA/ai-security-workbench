@@ -1,7 +1,8 @@
 import express from "express";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { readDb, writeDb, Project, TestCase, TestResult } from "./store.js";
+import { fileURLToPath } from "node:url";
+import { readDb, writeDb, PlaygroundRun, Project, PromptInjectionScenario, TestCase, TestResult } from "./store.js";
 import { generateRiskSnapshotReport } from "./report-generator.js";
 import { calculateFindingRiskScore, calculateProjectRiskScore, getRiskLevel } from "./scoring.js";
 import {
@@ -14,6 +15,7 @@ import {
   projectStatuses,
   resultStatuses,
   retestStatuses,
+  scenarioTypes,
   severities,
   testTypes
 } from "./workbench-data.js";
@@ -60,6 +62,14 @@ function validateEnum(field: string, value: unknown, allowed: string[], fallback
     validationError(`${field} must be one of: ${allowed.join(", ")}.`);
   }
   return candidate;
+}
+
+function textField(field: string, value: unknown, fallback = "", maxLength = 8000) {
+  const text = String(value || fallback || "").trim();
+  if (text.length > maxLength) {
+    validationError(`${field} must be ${maxLength} characters or fewer.`);
+  }
+  return text;
 }
 
 function handleValidation(error: unknown, res: express.Response) {
@@ -141,6 +151,16 @@ function createResult(body: Record<string, unknown>, projectId: string, existing
     id: existing?.id || randomUUID(),
     projectId,
     testCaseId: String(body.testCaseId ?? existing?.testCaseId ?? ""),
+    source: (["Test Library", "Prompt Injection Playground", "Custom"].includes(String(body.source || existing?.source || ""))
+      ? String(body.source || existing?.source)
+      : existing?.testCaseId || body.testCaseId
+        ? "Test Library"
+        : "Custom") as TestResult["source"],
+    playgroundRunId: String(body.playgroundRunId || existing?.playgroundRunId || ""),
+    scenarioType: String(body.scenarioType || existing?.scenarioType || ""),
+    systemPrompt: String(body.systemPrompt || existing?.systemPrompt || "").trim(),
+    retrievedContext: String(body.retrievedContext || existing?.retrievedContext || "").trim(),
+    evaluationCriteria: String(body.evaluationCriteria || existing?.evaluationCriteria || "").trim(),
     customTestName: String(body.customTestName || existing?.customTestName || "").trim(),
     category: validateEnum("Category", body.category, categories, existing?.category || categories[0]),
     owaspMapping: validateEnum("OWASP mapping", body.owaspMapping, owaspMappings, existing?.owaspMapping || owaspMappings[0]),
@@ -160,6 +180,108 @@ function createResult(body: Record<string, unknown>, projectId: string, existing
     createdAt: existing?.createdAt || now,
     updatedAt: now
   };
+}
+
+function createScenario(body: Record<string, unknown>, existing?: PromptInjectionScenario): PromptInjectionScenario {
+  const now = new Date().toISOString();
+  return {
+    id: existing?.id || randomUUID(),
+    name: textField("Name", body.name, existing?.name, 160),
+    description: textField("Description", body.description, existing?.description, 1000),
+    scenarioType: validateEnum("Scenario type", body.scenarioType, scenarioTypes, existing?.scenarioType || scenarioTypes[0]),
+    category: validateEnum("Category", body.category, categories, existing?.category || categories[0]),
+    owaspMapping: validateEnum("OWASP mapping", body.owaspMapping, owaspMappings, existing?.owaspMapping || owaspMappings[0]),
+    severity: validateEnum("Severity", body.severity, severities, existing?.severity || "Medium"),
+    systemPrompt: textField("System prompt", body.systemPrompt, existing?.systemPrompt),
+    userPrompt: textField("User prompt", body.userPrompt, existing?.userPrompt),
+    retrievedContext: textField("Retrieved context", body.retrievedContext, existing?.retrievedContext),
+    expectedSafeBehavior: textField("Expected safe behavior", body.expectedSafeBehavior, existing?.expectedSafeBehavior),
+    failureIndicators: textField("Failure indicators", body.failureIndicators, existing?.failureIndicators),
+    evaluationCriteria: textField("Evaluation criteria", body.evaluationCriteria, existing?.evaluationCriteria),
+    passCondition: textField("Pass condition", body.passCondition, existing?.passCondition, 2000),
+    partialCondition: textField("Partial condition", body.partialCondition, existing?.partialCondition, 2000),
+    failCondition: textField("Fail condition", body.failCondition, existing?.failCondition, 2000),
+    recommendedMitigation: textField("Recommended mitigation", body.recommendedMitigation, existing?.recommendedMitigation),
+    tags: splitTags(body.tags ?? existing?.tags ?? []),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function createPlaygroundRun(body: Record<string, unknown>, existing?: PlaygroundRun): PlaygroundRun {
+  const now = new Date().toISOString();
+  const severity = validateEnum("Severity", body.severity, severities, existing?.severity || "Medium");
+  const likelihood = validateEnum("Likelihood", body.likelihood, likelihoods, existing?.likelihood || "Medium");
+  const impact = validateEnum("Impact", body.impact, impacts, existing?.impact || "Medium");
+  const resultStatus = validateEnum("Result status", body.resultStatus, resultStatuses, existing?.resultStatus || "Not Tested");
+  return {
+    id: existing?.id || randomUUID(),
+    scenarioId: String(body.scenarioId || existing?.scenarioId || ""),
+    projectId: String(body.projectId || existing?.projectId || ""),
+    testResultId: String(body.testResultId || existing?.testResultId || ""),
+    name: textField("Name", body.name, existing?.name, 160),
+    scenarioType: validateEnum("Scenario type", body.scenarioType, scenarioTypes, existing?.scenarioType || scenarioTypes[0]),
+    category: validateEnum("Category", body.category, categories, existing?.category || categories[0]),
+    owaspMapping: validateEnum("OWASP mapping", body.owaspMapping, owaspMappings, existing?.owaspMapping || owaspMappings[0]),
+    severity,
+    systemPrompt: textField("System prompt", body.systemPrompt, existing?.systemPrompt),
+    userPrompt: textField("User prompt", body.userPrompt, existing?.userPrompt),
+    retrievedContext: textField("Retrieved context", body.retrievedContext, existing?.retrievedContext),
+    expectedSafeBehavior: textField("Expected safe behavior", body.expectedSafeBehavior, existing?.expectedSafeBehavior),
+    failureIndicators: textField("Failure indicators", body.failureIndicators, existing?.failureIndicators),
+    evaluationCriteria: textField("Evaluation criteria", body.evaluationCriteria, existing?.evaluationCriteria),
+    actualResponse: textField("Actual response", body.actualResponse, existing?.actualResponse),
+    resultStatus,
+    likelihood,
+    impact,
+    riskScore: calculateFindingRiskScore(severity, likelihood, impact, resultStatus),
+    evidenceNotes: textField("Evidence notes", body.evidenceNotes, existing?.evidenceNotes),
+    recommendation: textField("Recommendation", body.recommendation, existing?.recommendation),
+    testerNotes: textField("Tester notes", body.testerNotes, existing?.testerNotes),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function requireKnownScenario(db: Awaited<ReturnType<typeof readDb>>, scenarioId: string) {
+  if (!scenarioId) return;
+  if (!db.promptInjectionScenarios.some((scenario) => scenario.id === scenarioId)) {
+    validationError("Scenario not found.");
+  }
+}
+
+function resultFromRun(run: PlaygroundRun, projectId: string, existing?: TestResult): TestResult {
+  return createResult(
+    {
+      source: "Prompt Injection Playground",
+      playgroundRunId: run.id,
+      scenarioType: run.scenarioType,
+      systemPrompt: run.systemPrompt,
+      retrievedContext: run.retrievedContext,
+      evaluationCriteria: run.evaluationCriteria,
+      customTestName: run.name,
+      category: run.category,
+      owaspMapping: run.owaspMapping,
+      severity: run.severity,
+      actualPrompt: [
+        run.systemPrompt ? `System / intended behavior:\n${run.systemPrompt}` : "",
+        `User prompt:\n${run.userPrompt}`,
+        run.retrievedContext ? `Simulated retrieved context:\n${run.retrievedContext}` : ""
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      modelResponse: run.actualResponse,
+      resultStatus: run.resultStatus,
+      likelihood: run.likelihood,
+      impact: run.impact,
+      evidenceNotes: run.evidenceNotes,
+      recommendation: run.recommendation,
+      testerNotes: run.testerNotes,
+      retestStatus: "Not Retested"
+    },
+    projectId,
+    existing
+  );
 }
 
 function projectSummary(project: Project, results: TestResult[]) {
@@ -188,7 +310,8 @@ app.get("/api/workbench", async (_req, res) => {
       impacts,
       retestStatuses,
       projectStatuses,
-      aiSystemTypes
+      aiSystemTypes,
+      scenarioTypes
     }
   });
 });
@@ -403,6 +526,12 @@ app.post("/api/projects/:id/add-tests", async (req, res) => {
       id: randomUUID(),
       projectId: project.id,
       testCaseId: test.id,
+      source: "Test Library",
+      playgroundRunId: "",
+      scenarioType: "",
+      systemPrompt: "",
+      retrievedContext: "",
+      evaluationCriteria: test.evaluationCriteria,
       customTestName: "",
       category: test.category,
       owaspMapping: test.owaspMapping,
@@ -426,6 +555,227 @@ app.post("/api/projects/:id/add-tests", async (req, res) => {
   project.updatedAt = now;
   await writeDb(db);
   res.status(201).json(created);
+});
+
+app.get("/api/playground/scenarios", async (_req, res) => {
+  const db = await readDb();
+  res.json(db.promptInjectionScenarios);
+});
+
+app.post("/api/playground/scenarios", async (req, res) => {
+  const missing = requireFields(req.body || {}, [
+    "name",
+    "scenarioType",
+    "category",
+    "severity",
+    "userPrompt",
+    "expectedSafeBehavior",
+    "failureIndicators",
+    "recommendedMitigation"
+  ]);
+  if (missing.length > 0) {
+    res.status(400).json({ error: `Missing required fields: ${missing.join(", ")}` });
+    return;
+  }
+  const db = await readDb();
+  let scenario: PromptInjectionScenario;
+  try {
+    scenario = createScenario(req.body || {});
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.promptInjectionScenarios.unshift(scenario);
+  await writeDb(db);
+  res.status(201).json(scenario);
+});
+
+app.put("/api/playground/scenarios/:id", async (req, res) => {
+  const db = await readDb();
+  const index = db.promptInjectionScenarios.findIndex((scenario) => scenario.id === req.params.id);
+  if (index === -1) {
+    res.status(404).json({ error: "scenario not found" });
+    return;
+  }
+  let scenario: PromptInjectionScenario;
+  try {
+    scenario = createScenario(req.body || {}, db.promptInjectionScenarios[index]);
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.promptInjectionScenarios[index] = scenario;
+  await writeDb(db);
+  res.json(scenario);
+});
+
+app.post("/api/playground/scenarios/:id/duplicate", async (req, res) => {
+  const db = await readDb();
+  const scenario = db.promptInjectionScenarios.find((item) => item.id === req.params.id);
+  if (!scenario) {
+    res.status(404).json({ error: "scenario not found" });
+    return;
+  }
+  const now = new Date().toISOString();
+  const duplicate: PromptInjectionScenario = {
+    ...scenario,
+    id: randomUUID(),
+    name: `${scenario.name} copy`,
+    createdAt: now,
+    updatedAt: now
+  };
+  db.promptInjectionScenarios.unshift(duplicate);
+  await writeDb(db);
+  res.status(201).json(duplicate);
+});
+
+app.delete("/api/playground/scenarios/:id", async (req, res) => {
+  const db = await readDb();
+  db.promptInjectionScenarios = db.promptInjectionScenarios.filter((scenario) => scenario.id !== req.params.id);
+  db.playgroundRuns.forEach((run) => {
+    if (run.scenarioId === req.params.id) run.scenarioId = "";
+  });
+  await writeDb(db);
+  res.json({ ok: true });
+});
+
+app.post("/api/playground/scenarios/:id/test-case", async (req, res) => {
+  const db = await readDb();
+  const scenario = db.promptInjectionScenarios.find((item) => item.id === req.params.id);
+  if (!scenario) {
+    res.status(404).json({ error: "scenario not found" });
+    return;
+  }
+  let test: TestCase;
+  try {
+    test = createTestCase({
+      name: scenario.name,
+      description: scenario.description,
+      category: scenario.category,
+      owaspMapping: scenario.owaspMapping,
+      testType: scenario.scenarioType === "RAG Context Injection" ? "RAG document test" : "Direct prompt test",
+      severity: scenario.severity,
+      prompt: [scenario.userPrompt, scenario.retrievedContext ? `Simulated context:\n${scenario.retrievedContext}` : ""]
+        .filter(Boolean)
+        .join("\n\n"),
+      expectedBehavior: scenario.expectedSafeBehavior,
+      failureIndicators: scenario.failureIndicators,
+      recommendedMitigation: scenario.recommendedMitigation,
+      evaluationCriteria: scenario.evaluationCriteria,
+      passCondition: scenario.passCondition,
+      failCondition: scenario.failCondition,
+      partialCondition: scenario.partialCondition,
+      evidenceGuidance: "Record the playground run, observed model/app response, evidence notes, and the selected evaluation outcome.",
+      tags: [...scenario.tags, "playground", scenario.scenarioType.toLowerCase().replaceAll(" ", "-")]
+    });
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.testCases.unshift(test);
+  await writeDb(db);
+  res.status(201).json(test);
+});
+
+app.get("/api/playground/runs", async (_req, res) => {
+  const db = await readDb();
+  res.json(db.playgroundRuns);
+});
+
+app.get("/api/playground/runs/:id", async (req, res) => {
+  const db = await readDb();
+  const run = db.playgroundRuns.find((item) => item.id === req.params.id);
+  if (!run) {
+    res.status(404).json({ error: "run not found" });
+    return;
+  }
+  res.json(run);
+});
+
+app.post("/api/playground/runs", async (req, res) => {
+  const missing = requireFields(req.body || {}, [
+    "name",
+    "category",
+    "severity",
+    "actualResponse",
+    "resultStatus",
+    "likelihood",
+    "impact",
+    "recommendation"
+  ]);
+  if (missing.length > 0) {
+    res.status(400).json({ error: `Missing required fields: ${missing.join(", ")}` });
+    return;
+  }
+  const db = await readDb();
+  let run: PlaygroundRun;
+  try {
+    requireKnownScenario(db, String(req.body?.scenarioId || ""));
+    run = createPlaygroundRun(req.body || {});
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.playgroundRuns.unshift(run);
+  await writeDb(db);
+  res.status(201).json(run);
+});
+
+app.put("/api/playground/runs/:id", async (req, res) => {
+  const db = await readDb();
+  const index = db.playgroundRuns.findIndex((item) => item.id === req.params.id);
+  if (index === -1) {
+    res.status(404).json({ error: "run not found" });
+    return;
+  }
+  let run: PlaygroundRun;
+  try {
+    requireKnownScenario(db, String(req.body?.scenarioId || db.playgroundRuns[index].scenarioId || ""));
+    run = createPlaygroundRun(req.body || {}, db.playgroundRuns[index]);
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.playgroundRuns[index] = run;
+  await writeDb(db);
+  res.json(run);
+});
+
+app.post("/api/playground/runs/:id/save-to-project", async (req, res) => {
+  const db = await readDb();
+  const run = db.playgroundRuns.find((item) => item.id === req.params.id);
+  if (!run) {
+    res.status(404).json({ error: "run not found" });
+    return;
+  }
+  const projectId = String(req.body?.projectId || run.projectId || "");
+  const project = db.projects.find((item) => item.id === projectId);
+  if (!project) {
+    res.status(400).json({ error: "Select an existing project before saving this run." });
+    return;
+  }
+  let result: TestResult;
+  const existingResultIndex = db.testResults.findIndex(
+    (item) => item.id === run.testResultId && item.projectId === project.id
+  );
+  const existingResult = existingResultIndex === -1 ? undefined : db.testResults[existingResultIndex];
+  try {
+    result = resultFromRun(run, project.id, existingResult);
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  if (existingResultIndex === -1) {
+    db.testResults.push(result);
+  } else {
+    db.testResults[existingResultIndex] = result;
+  }
+  run.projectId = project.id;
+  run.testResultId = result.id;
+  run.updatedAt = new Date().toISOString();
+  project.updatedAt = run.updatedAt;
+  await writeDb(db);
+  res.status(201).json({ run, result, project: projectSummary(project, db.testResults) });
 });
 
 app.post("/api/projects/:id/results", async (req, res) => {
@@ -504,6 +854,12 @@ app.get("/api/projects/:id/report", async (req, res) => {
   res.json({ markdown: generateRiskSnapshotReport(project, results, db.testCases) });
 });
 
-app.listen(port, () => {
-  console.log(`AI Security Workbench running on http://localhost:${port}`);
-});
+export { app };
+
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+
+if (isDirectRun) {
+  app.listen(port, () => {
+    console.log(`AI Security Workbench running on http://localhost:${port}`);
+  });
+}
