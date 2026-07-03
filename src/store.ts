@@ -46,11 +46,16 @@ export type TestResult = {
   id: string;
   projectId: string;
   testCaseId: string;
-  source: "Test Library" | "Prompt Injection Playground" | "Custom";
+  source: "Test Library" | "Prompt Injection Playground" | "RAG Attack Lab" | "Custom";
   playgroundRunId: string;
+  ragRunId: string;
   scenarioType: string;
+  ragRiskType: string;
   systemPrompt: string;
   retrievedContext: string;
+  retrievedContextSummary: string;
+  untrustedChunksSummary: string;
+  userQuestion: string;
   evaluationCriteria: string;
   customTestName: string;
   category: string;
@@ -123,12 +128,78 @@ export type PlaygroundRun = {
   updatedAt: string;
 };
 
+export type RetrievedChunk = {
+  id: string;
+  title: string;
+  sourceName: string;
+  sourceType: string;
+  trustLevel: string;
+  riskLabel: string;
+  content: string;
+  includeInRetrieval: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RagScenario = {
+  id: string;
+  name: string;
+  description: string;
+  ragRiskType: string;
+  category: string;
+  owaspMapping: string;
+  severity: string;
+  systemPrompt: string;
+  userQuestion: string;
+  retrievedChunks: RetrievedChunk[];
+  expectedSafeBehavior: string;
+  failureIndicators: string;
+  evaluationCriteria: string;
+  passCondition: string;
+  partialCondition: string;
+  failCondition: string;
+  recommendedMitigation: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RagRun = {
+  id: string;
+  scenarioId: string;
+  projectId: string;
+  testResultId: string;
+  name: string;
+  ragRiskType: string;
+  category: string;
+  owaspMapping: string;
+  severity: string;
+  systemPrompt: string;
+  userQuestion: string;
+  retrievedChunks: RetrievedChunk[];
+  expectedSafeBehavior: string;
+  failureIndicators: string;
+  evaluationCriteria: string;
+  actualResponse: string;
+  resultStatus: string;
+  likelihood: string;
+  impact: string;
+  riskScore: number;
+  evidenceNotes: string;
+  recommendation: string;
+  testerNotes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Db = {
   testCases: TestCase[];
   projects: Project[];
   testResults: TestResult[];
   promptInjectionScenarios: PromptInjectionScenario[];
   playgroundRuns: PlaygroundRun[];
+  ragScenarios: RagScenario[];
+  ragRuns: RagRun[];
 };
 
 const dbPath = path.join(process.cwd(), "data", "db.json");
@@ -139,7 +210,9 @@ function defaultDb(): Db {
     projects: [],
     testResults: [],
     promptInjectionScenarios: [],
-    playgroundRuns: []
+    playgroundRuns: [],
+    ragScenarios: [],
+    ragRuns: []
   };
 }
 
@@ -159,13 +232,20 @@ export async function readDb(): Promise<Db> {
       ...result,
       source: result.source || "Test Library",
       playgroundRunId: result.playgroundRunId || "",
+      ragRunId: result.ragRunId || "",
       scenarioType: result.scenarioType || "",
+      ragRiskType: result.ragRiskType || "",
       systemPrompt: result.systemPrompt || "",
       retrievedContext: result.retrievedContext || "",
+      retrievedContextSummary: result.retrievedContextSummary || "",
+      untrustedChunksSummary: result.untrustedChunksSummary || "",
+      userQuestion: result.userQuestion || "",
       evaluationCriteria: result.evaluationCriteria || ""
     })) as TestResult[],
     promptInjectionScenarios: source.promptInjectionScenarios || [],
-    playgroundRuns: source.playgroundRuns || []
+    playgroundRuns: source.playgroundRuns || [],
+    ragScenarios: source.ragScenarios || [],
+    ragRuns: source.ragRuns || []
   };
   return merged;
 }

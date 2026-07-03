@@ -4,7 +4,7 @@ A local web app for documenting authorized LLM red team tests, scoring findings,
 
 ## Overview
 
-**AI Security Workbench** is a defensive portfolio project for structured AI security assessments. Module 1, **Red Team Test Library + Report Generator**, helps users manage reusable LLM security tests, attach them to assessment projects, record manual results, score risk, and export a professional Markdown report. Module 2, **Prompt Injection Playground**, adds a controlled simulator for documenting authorized prompt injection scenarios and saving findings into project reports.
+**AI Security Workbench** is a defensive portfolio project for structured AI security assessments. Module 1, **Red Team Test Library + Report Generator**, helps users manage reusable LLM security tests, attach them to assessment projects, record manual results, score risk, and export a professional Markdown report. Module 2, **Prompt Injection Playground**, adds a controlled simulator for documenting authorized prompt injection scenarios and saving findings into project reports. Module 3, **RAG Attack Lab**, adds a retrieval-risk workspace for documenting trusted and untrusted context behavior in RAG systems.
 
 ## Who It Is For
 
@@ -19,9 +19,10 @@ A local web app for documenting authorized LLM red team tests, scoring findings,
 - Assessment projects with scope, objective, system type, status, tester, and authorization confirmation.
 - Test result workflow for prompt/input, observed response, status, likelihood, impact, evidence, recommendations, and retest status.
 - Prompt Injection Playground with scenario templates, system prompt/intended behavior setup, user prompt input, simulated retrieved context, manual observed response capture, live risk preview, and save-to-project flow.
+- RAG Attack Lab with scenario builder, retrieved context simulator, trust level and risk labels, manual observed response capture, live risk preview, and save-to-project flow.
 - Project and portfolio dashboards with risk scores, status distribution, severity distribution, category breakdown, and top findings.
 - AI Risk Snapshot report generator with rendered browser preview, copy Markdown, download Markdown, and print support.
-- Seeded demo data with 15 AI security test cases, 8 prompt injection scenarios, and a sample customer support assistant assessment.
+- Seeded demo data with 15 AI security test cases, 8 prompt injection scenarios, 6 RAG Lab scenarios, and a sample customer support assistant assessment.
 
 OWASP-style mappings use 2025 GenAI/LLM Top 10-style labels for practical guidance. Review mappings against the latest OWASP GenAI Top 10 before using the output in a formal assessment.
 
@@ -42,6 +43,23 @@ Key features:
 - Save scenario as reusable test case.
 - Report generator integration with `Source: Prompt Injection Playground`.
 
+## Module 3: RAG Attack Lab
+
+The RAG Attack Lab allows users to simulate retrieval-based AI risks, document trusted and untrusted context, evaluate observed assistant behavior, and save RAG findings into project reports.
+
+Key features:
+
+- RAG scenario builder.
+- Retrieved context simulator.
+- Trust level and risk labels.
+- Expected behavior rubric.
+- Manual observed response capture.
+- Pass/fail/partial evaluation.
+- Risk score preview.
+- Save to project.
+- Save scenario as reusable test case.
+- Report generator integration with `Source: RAG Attack Lab`.
+
 ## Demo Workflow
 
 1. Open the dashboard.
@@ -53,9 +71,11 @@ Key features:
 7. Edit a failed result and review the calculated risk score.
 8. Open the Prompt Injection Playground and load a seeded scenario.
 9. Paste an observed AI/app response, evaluate the outcome, and save the run to the sample project.
-10. Open the project dashboard.
-11. Generate the AI Risk Snapshot report.
-12. Copy or download the Markdown report.
+10. Open the RAG Attack Lab and load `Malicious Warranty Document Instruction`.
+11. Review trusted and untrusted retrieved chunks, paste an observed AI/app response, evaluate the outcome, and save the run to the sample project.
+12. Open the project dashboard.
+13. Generate the AI Risk Snapshot report.
+14. Copy or download the Markdown report.
 
 ## Tech Stack
 
@@ -90,6 +110,7 @@ The seed creates:
 
 - 15 reusable AI red team test cases.
 - 8 prompt injection playground scenarios.
+- 6 RAG Attack Lab scenarios.
 - 1 demo project: `Demo Assessment - Customer Support AI Assistant`.
 - 8 attached test results with passed, failed, and partial outcomes.
 
@@ -179,6 +200,26 @@ Use this tool only on systems you own or have explicit permission to test.
 #### Report Preview Showing Source: Prompt Injection Playground
 ![Report Preview Showing Source Prompt Injection Playground](docs/screenshots/module-2/05-report-source-prompt-injection-playground.png)
 
+### Module 3: RAG Attack Lab
+
+#### RAG Lab Main Screen with Manual-Only Notice
+![RAG Lab Main Screen with Manual-Only Notice](docs/screenshots/module-3/01-rag-lab-main-manual-notice.png)
+
+#### Malicious Warranty Document Scenario
+![Malicious Warranty Document Scenario](docs/screenshots/module-3/02-malicious-warranty-document-scenario.png)
+
+#### Retrieved Context with Trusted and Untrusted Chunks
+![Retrieved Context with Trusted and Untrusted Chunks](docs/screenshots/module-3/03-retrieved-context-trusted-untrusted-chunks.png)
+
+#### Failed RAG Evaluation with Live Risk Score
+![Failed RAG Evaluation with Live Risk Score](docs/screenshots/module-3/04-rag-failed-evaluation-risk-score.png)
+
+#### Project Result Showing Source: RAG Attack Lab
+![Project Result Showing Source RAG Attack Lab](docs/screenshots/module-3/05-project-result-source-rag-attack-lab.png)
+
+#### Report Preview Showing RAG Finding and Retrieved Context
+![Report Preview Showing RAG Finding and Retrieved Context](docs/screenshots/module-3/06-report-rag-finding-retrieved-context.png)
+
 ## Quality Checks
 
 ```bash
@@ -194,5 +235,5 @@ npm run typecheck
 - Evidence attachment workflow.
 - Test library versioning.
 - Optional model API integration for authorized local evaluations.
-- RAG Attack Lab.
+- RAG Attack Lab Module 3.1 polish: richer citations, chunk import/export, and retrieval relevance scoring.
 - Multi-user workspaces.

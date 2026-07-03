@@ -2,7 +2,18 @@ import express from "express";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { readDb, writeDb, PlaygroundRun, Project, PromptInjectionScenario, TestCase, TestResult } from "./store.js";
+import {
+  readDb,
+  writeDb,
+  PlaygroundRun,
+  Project,
+  PromptInjectionScenario,
+  RagRun,
+  RagScenario,
+  RetrievedChunk,
+  TestCase,
+  TestResult
+} from "./store.js";
 import { generateRiskSnapshotReport } from "./report-generator.js";
 import { calculateFindingRiskScore, calculateProjectRiskScore, getRiskLevel } from "./scoring.js";
 import {
@@ -15,6 +26,10 @@ import {
   projectStatuses,
   resultStatuses,
   retestStatuses,
+  ragRiskLabels,
+  ragRiskTypes,
+  ragSourceTypes,
+  ragTrustLevels,
   scenarioTypes,
   severities,
   testTypes
@@ -36,6 +51,11 @@ function splitTags(value: unknown) {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
+}
+
+function summarizeText(value: string, maxLength = 220) {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}...` : normalized;
 }
 
 function requireFields(body: Record<string, unknown>, fields: string[]) {
@@ -68,6 +88,14 @@ function textField(field: string, value: unknown, fallback = "", maxLength = 800
   const text = String(value || fallback || "").trim();
   if (text.length > maxLength) {
     validationError(`${field} must be ${maxLength} characters or fewer.`);
+  }
+  return text;
+}
+
+function requiredTextField(field: string, value: unknown, fallback = "", maxLength = 8000) {
+  const text = textField(field, value, fallback, maxLength);
+  if (!text) {
+    validationError(`${field} is required.`);
   }
   return text;
 }
@@ -151,15 +179,20 @@ function createResult(body: Record<string, unknown>, projectId: string, existing
     id: existing?.id || randomUUID(),
     projectId,
     testCaseId: String(body.testCaseId ?? existing?.testCaseId ?? ""),
-    source: (["Test Library", "Prompt Injection Playground", "Custom"].includes(String(body.source || existing?.source || ""))
+    source: (["Test Library", "Prompt Injection Playground", "RAG Attack Lab", "Custom"].includes(String(body.source || existing?.source || ""))
       ? String(body.source || existing?.source)
       : existing?.testCaseId || body.testCaseId
         ? "Test Library"
         : "Custom") as TestResult["source"],
     playgroundRunId: String(body.playgroundRunId || existing?.playgroundRunId || ""),
+    ragRunId: String(body.ragRunId || existing?.ragRunId || ""),
     scenarioType: String(body.scenarioType || existing?.scenarioType || ""),
+    ragRiskType: String(body.ragRiskType || existing?.ragRiskType || ""),
     systemPrompt: String(body.systemPrompt || existing?.systemPrompt || "").trim(),
     retrievedContext: String(body.retrievedContext || existing?.retrievedContext || "").trim(),
+    retrievedContextSummary: String(body.retrievedContextSummary || existing?.retrievedContextSummary || "").trim(),
+    untrustedChunksSummary: String(body.untrustedChunksSummary || existing?.untrustedChunksSummary || "").trim(),
+    userQuestion: String(body.userQuestion || existing?.userQuestion || "").trim(),
     evaluationCriteria: String(body.evaluationCriteria || existing?.evaluationCriteria || "").trim(),
     customTestName: String(body.customTestName || existing?.customTestName || "").trim(),
     category: validateEnum("Category", body.category, categories, existing?.category || categories[0]),
@@ -180,6 +213,79 @@ function createResult(body: Record<string, unknown>, projectId: string, existing
     createdAt: existing?.createdAt || now,
     updatedAt: now
   };
+}
+
+function createRetrievedChunk(body: Record<string, unknown>, existing?: RetrievedChunk): RetrievedChunk {
+  const now = new Date().toISOString();
+  return {
+    id: String(body.id || existing?.id || randomUUID()),
+    title: requiredTextField("Chunk title", body.title, existing?.title, 160),
+    sourceName: requiredTextField("Source name", body.sourceName, existing?.sourceName, 160),
+    sourceType: validateEnum("Source type", body.sourceType, ragSourceTypes, existing?.sourceType),
+    trustLevel: validateEnum("Trust level", body.trustLevel, ragTrustLevels, existing?.trustLevel),
+    riskLabel: validateEnum("Risk label", body.riskLabel, ragRiskLabels, existing?.riskLabel),
+    content: requiredTextField("Chunk content", body.content, existing?.content, 8000),
+    includeInRetrieval:
+      body.includeInRetrieval === undefined
+        ? existing?.includeInRetrieval ?? true
+        : body.includeInRetrieval === true || body.includeInRetrieval === "true",
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function createRetrievedChunks(value: unknown, existing: RetrievedChunk[] = []) {
+  const rawChunks = Array.isArray(value) ? value : [];
+  if (rawChunks.length === 0) validationError("At least one retrieved chunk is required.");
+  if (rawChunks.length > 5) validationError("Retrieved context supports up to 5 chunks in this version.");
+  const chunks = rawChunks.map((raw, index) => {
+    const body = (raw || {}) as Record<string, unknown>;
+    const previous = existing.find((chunk) => chunk.id === body.id);
+    const chunk = createRetrievedChunk(body, previous);
+    return chunk;
+  });
+  if (!chunks.some((chunk) => chunk.includeInRetrieval)) {
+    validationError("At least one retrieved chunk must be included in retrieval.");
+  }
+  return chunks;
+}
+
+function maxBacktickRun(value: string) {
+  return Math.max(0, ...Array.from(value.matchAll(/`+/g)).map((match) => match[0].length));
+}
+
+function fencedTextBlock(value: string) {
+  const fence = "`".repeat(Math.max(3, maxBacktickRun(value) + 1));
+  return `${fence}text\n${value}\n${fence}`;
+}
+
+function retrievedContextReport(chunks: RetrievedChunk[]) {
+  const included = chunks.filter((chunk) => chunk.includeInRetrieval);
+  return included
+    .map(
+      (chunk, index) => `Chunk ${index + 1}: ${chunk.title}
+Source: ${chunk.sourceName}
+Source Type: ${chunk.sourceType}
+Trust Level: ${chunk.trustLevel}
+Risk Label: ${chunk.riskLabel}
+
+${fencedTextBlock(chunk.content)}`
+    )
+    .join("\n\n");
+}
+
+function riskyChunkReport(chunks: RetrievedChunk[]) {
+  const risky = chunks.filter(
+    (chunk) => chunk.includeInRetrieval && (chunk.trustLevel !== "Trusted" || chunk.riskLabel !== "Clean")
+  );
+  return risky.length ? retrievedContextReport(risky) : "No untrusted or risky retrieved chunks documented.";
+}
+
+function retrievedContextSummary(chunks: RetrievedChunk[]) {
+  return chunks
+    .filter((chunk) => chunk.includeInRetrieval)
+    .map((chunk) => `${chunk.title} (${chunk.sourceName}; ${chunk.trustLevel}; ${chunk.riskLabel}): ${summarizeText(chunk.content)}`)
+    .join("\n");
 }
 
 function createScenario(body: Record<string, unknown>, existing?: PromptInjectionScenario): PromptInjectionScenario {
@@ -243,10 +349,78 @@ function createPlaygroundRun(body: Record<string, unknown>, existing?: Playgroun
   };
 }
 
+function createRagScenario(body: Record<string, unknown>, existing?: RagScenario): RagScenario {
+  const now = new Date().toISOString();
+  return {
+    id: existing?.id || randomUUID(),
+    name: textField("Name", body.name, existing?.name, 160),
+    description: textField("Description", body.description, existing?.description, 1000),
+    ragRiskType: validateEnum("RAG risk type", body.ragRiskType, ragRiskTypes, existing?.ragRiskType || ragRiskTypes[0]),
+    category: validateEnum("Category", body.category, categories, existing?.category || categories[0]),
+    owaspMapping: validateEnum("OWASP mapping", body.owaspMapping, owaspMappings, existing?.owaspMapping || owaspMappings[0]),
+    severity: validateEnum("Severity", body.severity, severities, existing?.severity || "Medium"),
+    systemPrompt: requiredTextField("System prompt", body.systemPrompt, existing?.systemPrompt),
+    userQuestion: requiredTextField("User question", body.userQuestion, existing?.userQuestion),
+    retrievedChunks: createRetrievedChunks(body.retrievedChunks, existing?.retrievedChunks || []),
+    expectedSafeBehavior: requiredTextField("Expected safe behavior", body.expectedSafeBehavior, existing?.expectedSafeBehavior),
+    failureIndicators: requiredTextField("Failure indicators", body.failureIndicators, existing?.failureIndicators),
+    evaluationCriteria: textField("Evaluation criteria", body.evaluationCriteria, existing?.evaluationCriteria),
+    passCondition: textField("Pass condition", body.passCondition, existing?.passCondition, 2000),
+    partialCondition: textField("Partial condition", body.partialCondition, existing?.partialCondition, 2000),
+    failCondition: textField("Fail condition", body.failCondition, existing?.failCondition, 2000),
+    recommendedMitigation: textField("Recommended mitigation", body.recommendedMitigation, existing?.recommendedMitigation),
+    tags: splitTags(body.tags ?? existing?.tags ?? []),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function createRagRun(body: Record<string, unknown>, existing?: RagRun): RagRun {
+  const now = new Date().toISOString();
+  const severity = validateEnum("Severity", body.severity, severities, existing?.severity || "Medium");
+  const likelihood = validateEnum("Likelihood", body.likelihood, likelihoods, existing?.likelihood || "Medium");
+  const impact = validateEnum("Impact", body.impact, impacts, existing?.impact || "Medium");
+  const resultStatus = validateEnum("Result status", body.resultStatus, resultStatuses, existing?.resultStatus || "Not Tested");
+  return {
+    id: existing?.id || randomUUID(),
+    scenarioId: String(body.scenarioId || existing?.scenarioId || ""),
+    projectId: String(body.projectId || existing?.projectId || ""),
+    testResultId: String(body.testResultId || existing?.testResultId || ""),
+    name: textField("Name", body.name, existing?.name, 160),
+    ragRiskType: validateEnum("RAG risk type", body.ragRiskType, ragRiskTypes, existing?.ragRiskType || ragRiskTypes[0]),
+    category: validateEnum("Category", body.category, categories, existing?.category || categories[0]),
+    owaspMapping: validateEnum("OWASP mapping", body.owaspMapping, owaspMappings, existing?.owaspMapping || owaspMappings[0]),
+    severity,
+    systemPrompt: requiredTextField("System prompt", body.systemPrompt, existing?.systemPrompt),
+    userQuestion: requiredTextField("User question", body.userQuestion, existing?.userQuestion),
+    retrievedChunks: createRetrievedChunks(body.retrievedChunks, existing?.retrievedChunks || []),
+    expectedSafeBehavior: requiredTextField("Expected safe behavior", body.expectedSafeBehavior, existing?.expectedSafeBehavior),
+    failureIndicators: requiredTextField("Failure indicators", body.failureIndicators, existing?.failureIndicators),
+    evaluationCriteria: textField("Evaluation criteria", body.evaluationCriteria, existing?.evaluationCriteria),
+    actualResponse: textField("Actual response", body.actualResponse, existing?.actualResponse),
+    resultStatus,
+    likelihood,
+    impact,
+    riskScore: calculateFindingRiskScore(severity, likelihood, impact, resultStatus),
+    evidenceNotes: textField("Evidence notes", body.evidenceNotes, existing?.evidenceNotes),
+    recommendation: textField("Recommendation", body.recommendation, existing?.recommendation),
+    testerNotes: textField("Tester notes", body.testerNotes, existing?.testerNotes),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+}
+
 function requireKnownScenario(db: Awaited<ReturnType<typeof readDb>>, scenarioId: string) {
   if (!scenarioId) return;
   if (!db.promptInjectionScenarios.some((scenario) => scenario.id === scenarioId)) {
     validationError("Scenario not found.");
+  }
+}
+
+function requireKnownRagScenario(db: Awaited<ReturnType<typeof readDb>>, scenarioId: string) {
+  if (!scenarioId) return;
+  if (!db.ragScenarios.some((scenario) => scenario.id === scenarioId)) {
+    validationError("RAG scenario not found.");
   }
 }
 
@@ -284,6 +458,46 @@ function resultFromRun(run: PlaygroundRun, projectId: string, existing?: TestRes
   );
 }
 
+function resultFromRagRun(run: RagRun, projectId: string, existing?: TestResult): TestResult {
+  const contextSummary = retrievedContextSummary(run.retrievedChunks);
+  const contextReport = retrievedContextReport(run.retrievedChunks);
+  const untrustedReport = riskyChunkReport(run.retrievedChunks);
+  return createResult(
+    {
+      source: "RAG Attack Lab",
+      ragRunId: run.id,
+      ragRiskType: run.ragRiskType,
+      systemPrompt: run.systemPrompt,
+      retrievedContext: contextSummary,
+      retrievedContextSummary: contextReport,
+      untrustedChunksSummary: untrustedReport,
+      userQuestion: run.userQuestion,
+      evaluationCriteria: run.evaluationCriteria,
+      customTestName: run.name,
+      category: run.category,
+      owaspMapping: run.owaspMapping,
+      severity: run.severity,
+      actualPrompt: [
+        run.systemPrompt ? `System / intended behavior:\n${run.systemPrompt}` : "",
+        `User question:\n${run.userQuestion}`,
+        `Retrieved context summary:\n${contextSummary}`
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      modelResponse: run.actualResponse,
+      resultStatus: run.resultStatus,
+      likelihood: run.likelihood,
+      impact: run.impact,
+      evidenceNotes: run.evidenceNotes,
+      recommendation: run.recommendation,
+      testerNotes: run.testerNotes,
+      retestStatus: "Not Retested"
+    },
+    projectId,
+    existing
+  );
+}
+
 function projectSummary(project: Project, results: TestResult[]) {
   const projectResults = results.filter((result) => result.projectId === project.id);
   const score = calculateProjectRiskScore(projectResults);
@@ -296,8 +510,15 @@ function projectSummary(project: Project, results: TestResult[]) {
   };
 }
 
+async function ensureRagSeedScenarios(db: Awaited<ReturnType<typeof readDb>>) {
+  if (db.ragScenarios.length > 0) return;
+  db.ragScenarios = createSeedWorkbenchDb().ragScenarios;
+  await writeDb(db);
+}
+
 app.get("/api/workbench", async (_req, res) => {
   const db = await readDb();
+  await ensureRagSeedScenarios(db);
   res.json({
     ...db,
     constants: {
@@ -311,7 +532,11 @@ app.get("/api/workbench", async (_req, res) => {
       retestStatuses,
       projectStatuses,
       aiSystemTypes,
-      scenarioTypes
+      scenarioTypes,
+      ragRiskTypes,
+      ragSourceTypes,
+      ragTrustLevels,
+      ragRiskLabels
     }
   });
 });
@@ -528,9 +753,14 @@ app.post("/api/projects/:id/add-tests", async (req, res) => {
       testCaseId: test.id,
       source: "Test Library",
       playgroundRunId: "",
+      ragRunId: "",
       scenarioType: "",
+      ragRiskType: "",
       systemPrompt: "",
       retrievedContext: "",
+      retrievedContextSummary: "",
+      untrustedChunksSummary: "",
+      userQuestion: "",
       evaluationCriteria: test.evaluationCriteria,
       customTestName: "",
       category: test.category,
@@ -761,6 +991,238 @@ app.post("/api/playground/runs/:id/save-to-project", async (req, res) => {
   const existingResult = existingResultIndex === -1 ? undefined : db.testResults[existingResultIndex];
   try {
     result = resultFromRun(run, project.id, existingResult);
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  if (existingResultIndex === -1) {
+    db.testResults.push(result);
+  } else {
+    db.testResults[existingResultIndex] = result;
+  }
+  run.projectId = project.id;
+  run.testResultId = result.id;
+  run.updatedAt = new Date().toISOString();
+  project.updatedAt = run.updatedAt;
+  await writeDb(db);
+  res.status(201).json({ run, result, project: projectSummary(project, db.testResults) });
+});
+
+app.get("/api/rag/scenarios", async (_req, res) => {
+  const db = await readDb();
+  await ensureRagSeedScenarios(db);
+  res.json(db.ragScenarios);
+});
+
+app.post("/api/rag/scenarios", async (req, res) => {
+  const missing = requireFields(req.body || {}, [
+    "name",
+    "ragRiskType",
+    "category",
+    "severity",
+    "systemPrompt",
+    "userQuestion",
+    "expectedSafeBehavior",
+    "failureIndicators",
+    "recommendedMitigation"
+  ]);
+  if (missing.length > 0) {
+    res.status(400).json({ error: `Missing required fields: ${missing.join(", ")}` });
+    return;
+  }
+  const db = await readDb();
+  let scenario: RagScenario;
+  try {
+    scenario = createRagScenario(req.body || {});
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.ragScenarios.unshift(scenario);
+  await writeDb(db);
+  res.status(201).json(scenario);
+});
+
+app.put("/api/rag/scenarios/:id", async (req, res) => {
+  const db = await readDb();
+  const index = db.ragScenarios.findIndex((scenario) => scenario.id === req.params.id);
+  if (index === -1) {
+    res.status(404).json({ error: "RAG scenario not found" });
+    return;
+  }
+  let scenario: RagScenario;
+  try {
+    scenario = createRagScenario(req.body || {}, db.ragScenarios[index]);
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.ragScenarios[index] = scenario;
+  await writeDb(db);
+  res.json(scenario);
+});
+
+app.post("/api/rag/scenarios/:id/duplicate", async (req, res) => {
+  const db = await readDb();
+  const scenario = db.ragScenarios.find((item) => item.id === req.params.id);
+  if (!scenario) {
+    res.status(404).json({ error: "RAG scenario not found" });
+    return;
+  }
+  const now = new Date().toISOString();
+  const duplicate: RagScenario = {
+    ...scenario,
+    id: randomUUID(),
+    name: `${scenario.name} copy`,
+    retrievedChunks: scenario.retrievedChunks.map((chunk) => ({
+      ...chunk,
+      id: randomUUID(),
+      createdAt: now,
+      updatedAt: now
+    })),
+    createdAt: now,
+    updatedAt: now
+  };
+  db.ragScenarios.unshift(duplicate);
+  await writeDb(db);
+  res.status(201).json(duplicate);
+});
+
+app.delete("/api/rag/scenarios/:id", async (req, res) => {
+  const db = await readDb();
+  db.ragScenarios = db.ragScenarios.filter((scenario) => scenario.id !== req.params.id);
+  db.ragRuns.forEach((run) => {
+    if (run.scenarioId === req.params.id) run.scenarioId = "";
+  });
+  await writeDb(db);
+  res.json({ ok: true });
+});
+
+app.post("/api/rag/scenarios/:id/test-case", async (req, res) => {
+  const db = await readDb();
+  const scenario = db.ragScenarios.find((item) => item.id === req.params.id);
+  if (!scenario) {
+    res.status(404).json({ error: "RAG scenario not found" });
+    return;
+  }
+  let test: TestCase;
+  try {
+    test = createTestCase({
+      name: scenario.name,
+      description: scenario.description,
+      category: scenario.category,
+      owaspMapping: scenario.owaspMapping,
+      testType: "RAG document test",
+      severity: scenario.severity,
+      prompt: [`User question:\n${scenario.userQuestion}`, `Retrieved context summary:\n${retrievedContextSummary(scenario.retrievedChunks)}`].join("\n\n"),
+      expectedBehavior: scenario.expectedSafeBehavior,
+      failureIndicators: scenario.failureIndicators,
+      recommendedMitigation: scenario.recommendedMitigation,
+      evaluationCriteria: scenario.evaluationCriteria,
+      passCondition: scenario.passCondition,
+      failCondition: scenario.failCondition,
+      partialCondition: scenario.partialCondition,
+      evidenceGuidance: "Record the RAG Lab run, retrieved chunks, observed AI/app response, evidence notes, and selected evaluation outcome.",
+      tags: [...scenario.tags, "rag-lab", scenario.ragRiskType.toLowerCase().replaceAll(" ", "-").replaceAll("/", "")]
+    });
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.testCases.unshift(test);
+  await writeDb(db);
+  res.status(201).json(test);
+});
+
+app.get("/api/rag/runs", async (_req, res) => {
+  const db = await readDb();
+  res.json(db.ragRuns);
+});
+
+app.get("/api/rag/runs/:id", async (req, res) => {
+  const db = await readDb();
+  const run = db.ragRuns.find((item) => item.id === req.params.id);
+  if (!run) {
+    res.status(404).json({ error: "RAG run not found" });
+    return;
+  }
+  res.json(run);
+});
+
+app.post("/api/rag/runs", async (req, res) => {
+  const missing = requireFields(req.body || {}, [
+    "name",
+    "ragRiskType",
+    "category",
+    "severity",
+    "systemPrompt",
+    "userQuestion",
+    "expectedSafeBehavior",
+    "failureIndicators",
+    "actualResponse",
+    "resultStatus",
+    "likelihood",
+    "impact",
+    "recommendation"
+  ]);
+  if (missing.length > 0) {
+    res.status(400).json({ error: `Missing required fields: ${missing.join(", ")}` });
+    return;
+  }
+  const db = await readDb();
+  let run: RagRun;
+  try {
+    requireKnownRagScenario(db, String(req.body?.scenarioId || ""));
+    run = createRagRun(req.body || {});
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.ragRuns.unshift(run);
+  await writeDb(db);
+  res.status(201).json(run);
+});
+
+app.put("/api/rag/runs/:id", async (req, res) => {
+  const db = await readDb();
+  const index = db.ragRuns.findIndex((item) => item.id === req.params.id);
+  if (index === -1) {
+    res.status(404).json({ error: "RAG run not found" });
+    return;
+  }
+  let run: RagRun;
+  try {
+    requireKnownRagScenario(db, String(req.body?.scenarioId || db.ragRuns[index].scenarioId || ""));
+    run = createRagRun(req.body || {}, db.ragRuns[index]);
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.ragRuns[index] = run;
+  await writeDb(db);
+  res.json(run);
+});
+
+app.post("/api/rag/runs/:id/save-to-project", async (req, res) => {
+  const db = await readDb();
+  const run = db.ragRuns.find((item) => item.id === req.params.id);
+  if (!run) {
+    res.status(404).json({ error: "RAG run not found" });
+    return;
+  }
+  const projectId = String(req.body?.projectId || run.projectId || "");
+  const project = db.projects.find((item) => item.id === projectId);
+  if (!project) {
+    res.status(400).json({ error: "Select an existing project before saving this RAG run." });
+    return;
+  }
+  let result: TestResult;
+  const existingResultIndex = db.testResults.findIndex(
+    (item) => item.id === run.testResultId && item.projectId === project.id
+  );
+  const existingResult = existingResultIndex === -1 ? undefined : db.testResults[existingResultIndex];
+  try {
+    result = resultFromRagRun(run, project.id, existingResult);
   } catch (error) {
     if (handleValidation(error, res)) return;
     throw error;

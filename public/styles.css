@@ -196,6 +196,13 @@ nav a.active {
   font-size: 0.88rem;
 }
 
+.manual-notice {
+  border-color: #bed1ec;
+  border-left-color: var(--primary);
+  background: #f7fbff;
+  color: #263244;
+}
+
 .section {
   display: grid;
   gap: 16px;
@@ -692,6 +699,14 @@ td {
   line-height: 1.45;
 }
 
+.judgement-guide {
+  background: #ffffff;
+}
+
+.judgement-guide p strong {
+  color: #1f2d3d;
+}
+
 .eval-grid {
   display: grid;
   gap: 10px;
@@ -720,6 +735,100 @@ td {
 
 .action-stack button {
   width: 100%;
+}
+
+.rag-chunks {
+  display: grid;
+  gap: 12px;
+}
+
+.rag-chunk {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.chunk-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.chunk-head h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.chunk-badges {
+  min-height: 24px;
+}
+
+.chunk-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mini-actions {
+  flex-wrap: nowrap;
+}
+
+.mini-actions button {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+}
+
+.check-inline {
+  align-self: end;
+  min-height: 40px;
+  padding: 9px 0;
+}
+
+.context-preview {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #bed1ec;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.context-preview h3 {
+  margin: 0;
+  color: #2e3b4f;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.context-preview pre {
+  margin: 0;
+  white-space: pre-wrap;
+  color: #344054;
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.code-block {
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e5edf8;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.code-block code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
 }
 
 .meter-track {
@@ -882,6 +991,7 @@ td {
 
   .filters,
   .form-grid,
+  .chunk-grid,
   .detail-list {
     grid-template-columns: 1fr;
   }
@@ -914,6 +1024,12 @@ td {
 
   .bar-row {
     grid-template-columns: 1fr;
+  }
+
+  .chunk-head,
+  .mini-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 

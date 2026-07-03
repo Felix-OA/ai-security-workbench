@@ -14,6 +14,21 @@ function tableCell(value: string | number | undefined) {
     .trim();
 }
 
+function maxBacktickRun(value: string) {
+  return Math.max(0, ...Array.from(value.matchAll(/`+/g)).map((match) => match[0].length));
+}
+
+function fencedTextBlock(value: string) {
+  const text = clean(value);
+  const fence = "`".repeat(Math.max(3, maxBacktickRun(text) + 1));
+  return `${fence}text\n${text}\n${fence}`;
+}
+
+function safeRagContext(value: string | undefined, fallback: string) {
+  const text = clean(value, fallback);
+  return text.includes("Chunk 1:") && text.includes("```text") ? text : fencedTextBlock(text);
+}
+
 function countStatus(results: TestResult[], status: string) {
   return results.filter((result) => result.resultStatus === status).length;
 }
@@ -45,6 +60,38 @@ function recommendationLines(results: TestResult[], tests: TestCase[]) {
     .join("\n");
 }
 
+function sourceContext(result: TestResult) {
+  if (result.source === "Prompt Injection Playground") {
+    return `Source: Prompt Injection Playground
+Scenario Type: ${clean(result.scenarioType)}
+
+System Prompt / Intended Behavior:
+${clean(result.systemPrompt)}
+
+Retrieved Context Summary:
+${clean(result.retrievedContext, "No retrieved context documented.")}
+`;
+  }
+  if (result.source === "RAG Attack Lab") {
+    return `Source: RAG Attack Lab
+RAG Risk Type: ${clean(result.ragRiskType)}
+
+System Prompt / Intended Behavior:
+${clean(result.systemPrompt)}
+
+User Question:
+${clean(result.userQuestion)}
+
+Retrieved Context Summary:
+${safeRagContext(result.retrievedContextSummary || result.retrievedContext, "No retrieved context documented.")}
+
+Untrusted / Risky Chunks Detected:
+${safeRagContext(result.untrustedChunksSummary, "No untrusted or risky retrieved chunks documented.")}
+`;
+  }
+  return `Source: ${clean(result.source, "Test Library")}`;
+}
+
 export function generateRiskSnapshotReport(project: Project, results: TestResult[], tests: TestCase[]) {
   const completed = results.filter((result) => isCompletedResult(result.resultStatus));
   const failed = countStatus(results, "Failed");
@@ -70,21 +117,9 @@ export function generateRiskSnapshotReport(project: Project, results: TestResult
     .map((result, index) => {
       const name = testName(result, tests);
       const test = tests.find((item) => item.id === result.testCaseId);
-      const playgroundContext =
-        result.source === "Prompt Injection Playground"
-          ? `Source: Prompt Injection Playground
-Scenario Type: ${clean(result.scenarioType)}
-
-System Prompt / Intended Behavior:
-${clean(result.systemPrompt)}
-
-Retrieved Context Summary:
-${clean(result.retrievedContext, "No retrieved context documented.")}
-`
-          : `Source: ${clean(result.source, "Test Library")}`;
       return `### Finding ${index + 1}: ${name}
 
-${playgroundContext}
+${sourceContext(result)}
 
 Category: ${result.category}
 OWASP-style Mapping: ${result.owaspMapping}
