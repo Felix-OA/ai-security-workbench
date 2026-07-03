@@ -34,7 +34,7 @@ export function renderLanding() {
     </section>`;
 }
 
-export function moduleCopy(title) {
+function moduleCopy(title) {
   return {
     "Red Team Test Library": "Reusable, categorized LLM security tests mapped to common AI risk categories.",
     "Prompt Injection Playground": "Manual prompt injection scenario builder for observed-response evaluation.",
@@ -101,4 +101,3 @@ export function renderNotFound(message = "Page not found.") {
   setActions([`<button onclick="go('/dashboard')">Open Dashboard</button>`]);
   app.innerHTML = `<div class="empty"><strong>${escapeHtml(message)}</strong><span>Use the sidebar to continue.</span></div>`;
 }
-

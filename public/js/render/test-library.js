@@ -3,11 +3,13 @@ import { fetchJson } from "../api.js";
 import { state, loadState } from "../state.js";
 import { setTitle, setActions } from "../layout.js";
 import { go, routeQuery } from "../navigation.js";
+import { showToast } from "../toast.js";
 import { escapeHtml, rowsFromForm } from "../utils.js";
 import { badge, tags } from "../components/badges.js";
 import { optionList, errorBox } from "../components/forms.js";
 import { table } from "../components/tables.js";
 import { detailCard } from "../components/cards.js";
+import { renderNotFound } from "./static-pages.js";
 
 export function renderTests() {
   setTitle("Test Library");
@@ -61,7 +63,7 @@ export function renderTests() {
   });
 }
 
-export function updateTestFilters() {
+function updateTestFilters() {
   const params = new URLSearchParams();
   const q = document.getElementById("test-search").value.trim();
   const category = document.getElementById("test-category").value;
@@ -177,4 +179,3 @@ export function renderUseInProject(testId) {
       ${table(["Project", "Status", "Risk", "Tests", "Action"], rows, "Create a project before attaching tests.")}
     </section>`;
 }
-

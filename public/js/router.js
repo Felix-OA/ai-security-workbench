@@ -1,7 +1,7 @@
 import { app } from "./dom.js";
 import { loadState } from "./state.js";
 import { activeNav, setTitle } from "./layout.js";
-import { routeParts, go } from "./navigation.js";
+import { routeParts } from "./navigation.js";
 import { errorBox } from "./components/forms.js";
 import { renderLanding, renderDashboard, renderAbout, renderNotFound } from "./render/static-pages.js";
 import { renderTests, renderTestForm, renderTestDetail, renderUseInProject } from "./render/test-library.js";
@@ -45,4 +45,3 @@ export function startRouter() {
   window.addEventListener("hashchange", render);
   render();
 }
-

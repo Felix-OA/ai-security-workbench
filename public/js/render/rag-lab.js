@@ -168,7 +168,7 @@ export function ragChunksFromDom() {
     .filter((chunk) => chunk.title || chunk.sourceName || chunk.content);
 }
 
-export function ragContextSummary(chunks) {
+function ragContextSummary(chunks) {
   const included = chunks.filter((chunk) => chunk.includeInRetrieval);
   if (!included.length) return "No chunks are currently included in the simulated retrieval.";
   return included
@@ -392,11 +392,10 @@ export function renderRagLab() {
   document.getElementById("rag-chunks").addEventListener("input", updateRagSummaryPreview);
 }
 
-export function updateRagRiskPreview() {
+function updateRagRiskPreview() {
   const payload = ragPayload();
   const score = findingScore(payload);
   document.getElementById("rag-risk-score").textContent = score.toFixed(1);
   const level = riskLevel(Math.round((score / 22.5) * 100));
   document.getElementById("rag-risk-level").innerHTML = badge(level, level);
 }
-

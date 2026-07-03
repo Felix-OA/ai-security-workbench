@@ -3,6 +3,7 @@ import { fetchJson } from "../api.js";
 import { state, loadState } from "../state.js";
 import { setTitle, setActions } from "../layout.js";
 import { go, routeQuery } from "../navigation.js";
+import { showToast } from "../toast.js";
 import { projectRiskScore, riskLevel } from "../scoring.js";
 import { escapeHtml, rowsFromForm } from "../utils.js";
 import { badge } from "../components/badges.js";
@@ -10,6 +11,7 @@ import { optionList, errorBox } from "../components/forms.js";
 import { table } from "../components/tables.js";
 import { stat, countsBy, chart, riskMeter } from "../components/cards.js";
 import { testName } from "../names.js";
+import { renderNotFound } from "./static-pages.js";
 
 export function renderProjects() {
   setTitle("Projects");
@@ -44,7 +46,7 @@ export function renderProjects() {
   ["project-status", "project-industry", "project-risk"].forEach((id) => document.getElementById(id).addEventListener("input", updateProjectFilters));
 }
 
-export function updateProjectFilters() {
+function updateProjectFilters() {
   const params = new URLSearchParams();
   const status = document.getElementById("project-status").value;
   const industry = document.getElementById("project-industry").value;
@@ -307,4 +309,3 @@ export async function renderProjectDashboard(projectId) {
       <section class="section span-12"><h2>Top 5 highest-risk findings</h2>${table(["Finding", "Severity", "Status", "Risk score"], topFindings, "No failed or partial findings.")}</section>
     </section>`;
 }
-
