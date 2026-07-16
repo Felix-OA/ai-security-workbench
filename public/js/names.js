@@ -12,3 +12,6 @@ export function ragScenarioName(run) {
   return run.name || state.ragScenarios.find((scenario) => scenario.id === run.scenarioId)?.name || "RAG Lab run";
 }
 
+export function safetyRunName(run) {
+  return run.name || state.safetyTemplates.find((template) => template.id === run.templateId)?.name || "Safety Lab run";
+}

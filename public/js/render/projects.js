@@ -13,6 +13,13 @@ import { stat, countsBy, chart, riskMeter } from "../components/cards.js";
 import { testName } from "../names.js";
 import { renderNotFound } from "./static-pages.js";
 
+function sourceBadge(result) {
+  if (result.source === "Prompt Injection Playground") return badge("Source: Prompt Injection Playground", "neutral");
+  if (result.source === "RAG Attack Lab") return badge("Source: RAG Attack Lab", "neutral");
+  if (result.source === "Jailbreak & Safety Regression Lab") return badge("Source: Jailbreak & Safety Regression Lab", "neutral");
+  return "";
+}
+
 export function renderProjects() {
   setTitle("Projects");
   setActions([`<button onclick="go('/projects/new')">New Project</button>`]);
@@ -115,7 +122,7 @@ export async function renderProjectDetail(id) {
   ]);
   const score = projectRiskScore(results);
   const resultRows = results.map((result) => `<tr>
-    <td><span class="row-title"><strong>${escapeHtml(testName(result))}</strong><small>OWASP-style: ${escapeHtml(result.owaspMapping)}</small>${result.source === "Prompt Injection Playground" ? badge("Source: Playground", "neutral") : ""}${result.source === "RAG Attack Lab" ? badge("Source: RAG Attack Lab", "neutral") : ""}</span></td>
+    <td><span class="row-title"><strong>${escapeHtml(testName(result))}</strong><small>OWASP-style: ${escapeHtml(result.owaspMapping)}</small>${sourceBadge(result)}</span></td>
     <td>${badge(result.category, "neutral")}</td>
     <td>${badge(result.severity, result.severity)}</td>
     <td>${badge(result.resultStatus, result.resultStatus)}</td>
@@ -298,7 +305,7 @@ export async function renderProjectDashboard(projectId) {
     .filter((result) => ["Failed", "Partial"].includes(result.resultStatus))
     .sort((a, b) => b.riskScore - a.riskScore)
     .slice(0, 5)
-    .map((result) => `<tr><td>${escapeHtml(testName(result))}</td><td>${badge(result.severity, result.severity)}</td><td>${badge(result.resultStatus, result.resultStatus)}</td><td>${Number(result.riskScore).toFixed(1)}</td></tr>`);
+    .map((result) => `<tr><td><span class="row-title"><strong>${escapeHtml(testName(result))}</strong>${sourceBadge(result)}</span></td><td>${badge(result.severity, result.severity)}</td><td>${badge(result.resultStatus, result.resultStatus)}</td><td>${Number(result.riskScore).toFixed(1)}</td></tr>`);
   app.innerHTML = `
     <section class="grid">
       <article class="card span-4">${riskMeter(score, riskLevel(score))}</article>

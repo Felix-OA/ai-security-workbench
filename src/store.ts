@@ -46,9 +46,15 @@ export type TestResult = {
   id: string;
   projectId: string;
   testCaseId: string;
-  source: "Test Library" | "Prompt Injection Playground" | "RAG Attack Lab" | "Custom";
+  source: "Test Library" | "Prompt Injection Playground" | "RAG Attack Lab" | "Jailbreak & Safety Regression Lab" | "Custom";
   playgroundRunId: string;
   ragRunId: string;
+  safetyRunId: string;
+  safetyCampaignId: string;
+  campaignName: string;
+  targetSystem: string;
+  modelVersion: string;
+  safetyTestType: string;
   scenarioType: string;
   ragRiskType: string;
   systemPrompt: string;
@@ -56,6 +62,7 @@ export type TestResult = {
   retrievedContextSummary: string;
   untrustedChunksSummary: string;
   userQuestion: string;
+  expectedSafeBehavior: string;
   evaluationCriteria: string;
   customTestName: string;
   category: string;
@@ -71,6 +78,7 @@ export type TestResult = {
   evidenceUrl: string;
   recommendation: string;
   retestStatus: string;
+  mitigationNotes: string;
   testerNotes: string;
   dateTested: string;
   createdAt: string;
@@ -192,6 +200,78 @@ export type RagRun = {
   updatedAt: string;
 };
 
+export type SafetyCampaign = {
+  id: string;
+  name: string;
+  targetSystem: string;
+  modelVersion: string;
+  environment: string;
+  objective: string;
+  scope: string;
+  outOfScope: string;
+  testerName: string;
+  assessmentDate: string;
+  status: string;
+  authorizationConfirmed: boolean;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SafetyTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  safetyTestType: string;
+  category: string;
+  owaspMapping: string;
+  severity: string;
+  testPrompt: string;
+  expectedSafeBehavior: string;
+  failureIndicators: string;
+  evaluationCriteria: string;
+  passCondition: string;
+  partialCondition: string;
+  failCondition: string;
+  recommendedMitigation: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SafetyRun = {
+  id: string;
+  campaignId: string;
+  projectId: string;
+  testResultId: string;
+  templateId: string;
+  name: string;
+  safetyTestType: string;
+  category: string;
+  owaspMapping: string;
+  severity: string;
+  testPrompt: string;
+  expectedSafeBehavior: string;
+  failureIndicators: string;
+  evaluationCriteria: string;
+  observedResponse: string;
+  resultStatus: string;
+  likelihood: string;
+  impact: string;
+  riskScore: number;
+  evidenceNotes: string;
+  recommendation: string;
+  retestStatus: string;
+  mitigationApplied: string;
+  retestObservedResponse: string;
+  retestNotes: string;
+  retestDate: string;
+  testerNotes: string;
+  dateTested: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Db = {
   testCases: TestCase[];
   projects: Project[];
@@ -200,6 +280,9 @@ export type Db = {
   playgroundRuns: PlaygroundRun[];
   ragScenarios: RagScenario[];
   ragRuns: RagRun[];
+  safetyCampaigns: SafetyCampaign[];
+  safetyTemplates: SafetyTemplate[];
+  safetyRuns: SafetyRun[];
 };
 
 const dbPath = path.join(process.cwd(), "data", "db.json");
@@ -212,7 +295,10 @@ function defaultDb(): Db {
     promptInjectionScenarios: [],
     playgroundRuns: [],
     ragScenarios: [],
-    ragRuns: []
+    ragRuns: [],
+    safetyCampaigns: [],
+    safetyTemplates: [],
+    safetyRuns: []
   };
 }
 
@@ -233,6 +319,12 @@ export async function readDb(): Promise<Db> {
       source: result.source || "Test Library",
       playgroundRunId: result.playgroundRunId || "",
       ragRunId: result.ragRunId || "",
+      safetyRunId: result.safetyRunId || "",
+      safetyCampaignId: result.safetyCampaignId || "",
+      campaignName: result.campaignName || "",
+      targetSystem: result.targetSystem || "",
+      modelVersion: result.modelVersion || "",
+      safetyTestType: result.safetyTestType || "",
       scenarioType: result.scenarioType || "",
       ragRiskType: result.ragRiskType || "",
       systemPrompt: result.systemPrompt || "",
@@ -240,12 +332,17 @@ export async function readDb(): Promise<Db> {
       retrievedContextSummary: result.retrievedContextSummary || "",
       untrustedChunksSummary: result.untrustedChunksSummary || "",
       userQuestion: result.userQuestion || "",
-      evaluationCriteria: result.evaluationCriteria || ""
+      expectedSafeBehavior: result.expectedSafeBehavior || "",
+      evaluationCriteria: result.evaluationCriteria || "",
+      mitigationNotes: result.mitigationNotes || ""
     })) as TestResult[],
     promptInjectionScenarios: source.promptInjectionScenarios || [],
     playgroundRuns: source.playgroundRuns || [],
     ragScenarios: source.ragScenarios || [],
-    ragRuns: source.ragRuns || []
+    ragRuns: source.ragRuns || [],
+    safetyCampaigns: source.safetyCampaigns || [],
+    safetyTemplates: source.safetyTemplates || [],
+    safetyRuns: source.safetyRuns || []
   };
   return merged;
 }

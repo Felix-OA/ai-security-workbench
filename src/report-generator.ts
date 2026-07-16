@@ -89,7 +89,60 @@ Untrusted / Risky Chunks Detected:
 ${safeRagContext(result.untrustedChunksSummary, "No untrusted or risky retrieved chunks documented.")}
 `;
   }
+  if (result.source === "Jailbreak & Safety Regression Lab") {
+    return `Source: Jailbreak & Safety Regression Lab
+Campaign: ${clean(result.campaignName)}
+Target app/system: ${clean(result.targetSystem)}
+Model/app version: ${clean(result.modelVersion)}
+Safety test type: ${clean(result.safetyTestType)}
+
+Test Prompt:
+${fencedTextBlock(result.actualPrompt)}
+
+Expected Safe Behavior:
+${fencedTextBlock(result.expectedSafeBehavior)}
+
+Observed Response:
+${fencedTextBlock(result.modelResponse)}
+
+Retest Status: ${clean(result.retestStatus, "Not Retested")}
+${result.mitigationNotes ? `Mitigation / Retest Notes:\n${fencedTextBlock(result.mitigationNotes)}\n` : ""}`;
+  }
   return `Source: ${clean(result.source, "Test Library")}`;
+}
+
+function safetyRegressionSummary(results: TestResult[]) {
+  const safetyResults = results.filter((result) => result.source === "Jailbreak & Safety Regression Lab");
+  if (safetyResults.length === 0) return "";
+  const campaigns = [...new Map(safetyResults.map((result) => [result.safetyCampaignId || result.campaignName, result])).values()];
+  return campaigns
+    .map((campaignResult) => {
+      const campaignResults = safetyResults.filter((result) =>
+        campaignResult.safetyCampaignId
+          ? result.safetyCampaignId === campaignResult.safetyCampaignId
+          : result.campaignName === campaignResult.campaignName
+      );
+      const completed = campaignResults.filter((result) => ["Passed", "Failed", "Partial"].includes(result.resultStatus));
+      const passed = campaignResults.filter((result) => result.resultStatus === "Passed").length;
+      const failed = campaignResults.filter((result) => result.resultStatus === "Failed").length;
+      const partial = campaignResults.filter((result) => result.resultStatus === "Partial").length;
+      const highCriticalFailures = campaignResults.filter(
+        (result) => result.resultStatus === "Failed" && ["High", "Critical"].includes(result.severity)
+      ).length;
+      const score = completed.length ? Math.round(((passed + partial * 0.5) / completed.length) * 100) : 0;
+      return `### ${clean(campaignResult.campaignName, "Safety campaign")}
+
+* Campaign: ${clean(campaignResult.campaignName)}
+* Target app/system: ${clean(campaignResult.targetSystem)}
+* Model/app version: ${clean(campaignResult.modelVersion)}
+* Total tests in report: ${campaignResults.length}
+* Passed: ${passed}
+* Failed: ${failed}
+* Partial: ${partial}
+* Refusal consistency score: ${score}%
+* High/Critical failures: ${highCriticalFailures}`;
+    })
+    .join("\n\n");
 }
 
 export function generateRiskSnapshotReport(project: Project, results: TestResult[], tests: TestCase[]) {
@@ -117,6 +170,7 @@ export function generateRiskSnapshotReport(project: Project, results: TestResult
     .map((result, index) => {
       const name = testName(result, tests);
       const test = tests.find((item) => item.id === result.testCaseId);
+      const isSafetyLab = result.source === "Jailbreak & Safety Regression Lab";
       return `### Finding ${index + 1}: ${name}
 
 ${sourceContext(result)}
@@ -129,12 +183,13 @@ Impact: ${result.impact}
 Status: ${result.resultStatus}
 Risk Score: ${result.riskScore.toFixed(1)}
 
-Prompt/Input Used:
+${isSafetyLab ? "" : `Prompt/Input Used:
 
 > ${clean(result.actualPrompt)}
 
 Observed Response Summary:
 ${clean(result.modelResponse)}
+`}
 
 Evidence:
 ${clean(result.evidenceNotes)}
@@ -152,6 +207,7 @@ Retest Status:
 ${clean(result.retestStatus, "Not Retested")}`;
     })
     .join("\n\n");
+  const safetySummary = safetyRegressionSummary(results);
 
   const appendix = results
     .map((result) => {
@@ -207,6 +263,8 @@ Results were scored using severity, likelihood, impact, and observed result stat
 | ID | Finding | Source | Category | Severity | Status | Risk Score | Recommendation |
 | -- | ------- | ------ | -------- | -------- | ------ | ---------- | -------------- |
 ${findingRows || "| - | No tests selected | - | - | - | - | - | - |"}
+
+${safetySummary ? `## Safety Regression Summary\n\n${safetySummary}\n` : ""}
 
 ## Detailed Findings
 

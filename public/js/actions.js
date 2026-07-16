@@ -6,6 +6,7 @@ import { render } from "./router.js";
 import { renderProjectDetail } from "./render/projects.js";
 import { playgroundPayload, currentPlaygroundRunId, renderPlayground } from "./render/playground.js";
 import { ragPayload, currentRagRunId, renderRagLab, ragChunkCard, blankRagChunk, refreshRagChunkIndexes } from "./render/rag-lab.js";
+import { handleSafetyAction } from "./actions/safety-lab.js";
 
 export function attachGlobalActions() {
   document.body.addEventListener("click", async (event) => {
@@ -13,6 +14,7 @@ export function attachGlobalActions() {
   if (!target) return;
   const action = target.dataset.action;
   try {
+    if (await handleSafetyAction(action)) return;
     if (action === "seed") {
       await fetchJson("/api/workbench/seed", { method: "POST" });
       showToast("Seed data imported");
@@ -315,4 +317,3 @@ export function attachGlobalActions() {
   }
 });
 }
-

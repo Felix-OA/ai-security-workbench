@@ -7,6 +7,7 @@ import { renderLanding, renderDashboard, renderAbout, renderNotFound } from "./r
 import { renderTests, renderTestForm, renderTestDetail, renderUseInProject } from "./render/test-library.js";
 import { renderPlayground } from "./render/playground.js";
 import { renderRagLab } from "./render/rag-lab.js";
+import { renderSafetyLab } from "./render/safety-lab.js";
 import { renderProjects, renderProjectForm, renderAddTests, renderResultForm, renderProjectDashboard, renderProjectDetail } from "./render/projects.js";
 import { renderReport, renderSampleReport } from "./render/reports.js";
 
@@ -19,6 +20,7 @@ export async function render() {
     if (top === "dashboard") return renderDashboard();
     if (top === "playground") return renderPlayground();
     if (top === "rag-lab") return renderRagLab();
+    if (top === "safety-lab") return renderSafetyLab();
     if (top === "tests" && !id) return renderTests();
     if (top === "tests" && id === "new") return renderTestForm();
     if (top === "tests" && action === "edit") return renderTestForm(id);

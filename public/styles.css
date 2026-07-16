@@ -622,6 +622,17 @@ td {
   gap: 8px;
 }
 
+.workflow-list {
+  margin: 0;
+  padding-left: 22px;
+  color: #344054;
+  line-height: 1.55;
+}
+
+.workflow-list li + li {
+  margin-top: 4px;
+}
+
 .playground-main,
 .evaluation-column {
   align-self: start;

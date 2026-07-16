@@ -11,6 +11,9 @@ import {
   RagRun,
   RagScenario,
   RetrievedChunk,
+  SafetyCampaign,
+  SafetyRun,
+  SafetyTemplate,
   TestCase,
   TestResult
 } from "./store.js";
@@ -30,6 +33,10 @@ import {
   ragRiskTypes,
   ragSourceTypes,
   ragTrustLevels,
+  safetyCampaignStatuses,
+  safetyEnvironments,
+  safetyRetestStatuses,
+  safetyTestTypes,
   scenarioTypes,
   severities,
   testTypes
@@ -179,13 +186,19 @@ function createResult(body: Record<string, unknown>, projectId: string, existing
     id: existing?.id || randomUUID(),
     projectId,
     testCaseId: String(body.testCaseId ?? existing?.testCaseId ?? ""),
-    source: (["Test Library", "Prompt Injection Playground", "RAG Attack Lab", "Custom"].includes(String(body.source || existing?.source || ""))
+    source: (["Test Library", "Prompt Injection Playground", "RAG Attack Lab", "Jailbreak & Safety Regression Lab", "Custom"].includes(String(body.source || existing?.source || ""))
       ? String(body.source || existing?.source)
       : existing?.testCaseId || body.testCaseId
         ? "Test Library"
         : "Custom") as TestResult["source"],
     playgroundRunId: String(body.playgroundRunId || existing?.playgroundRunId || ""),
     ragRunId: String(body.ragRunId || existing?.ragRunId || ""),
+    safetyRunId: String(body.safetyRunId || existing?.safetyRunId || ""),
+    safetyCampaignId: String(body.safetyCampaignId || existing?.safetyCampaignId || ""),
+    campaignName: String(body.campaignName || existing?.campaignName || "").trim(),
+    targetSystem: String(body.targetSystem || existing?.targetSystem || "").trim(),
+    modelVersion: String(body.modelVersion || existing?.modelVersion || "").trim(),
+    safetyTestType: String(body.safetyTestType || existing?.safetyTestType || "").trim(),
     scenarioType: String(body.scenarioType || existing?.scenarioType || ""),
     ragRiskType: String(body.ragRiskType || existing?.ragRiskType || ""),
     systemPrompt: String(body.systemPrompt || existing?.systemPrompt || "").trim(),
@@ -193,6 +206,7 @@ function createResult(body: Record<string, unknown>, projectId: string, existing
     retrievedContextSummary: String(body.retrievedContextSummary || existing?.retrievedContextSummary || "").trim(),
     untrustedChunksSummary: String(body.untrustedChunksSummary || existing?.untrustedChunksSummary || "").trim(),
     userQuestion: String(body.userQuestion || existing?.userQuestion || "").trim(),
+    expectedSafeBehavior: String(body.expectedSafeBehavior || existing?.expectedSafeBehavior || "").trim(),
     evaluationCriteria: String(body.evaluationCriteria || existing?.evaluationCriteria || "").trim(),
     customTestName: String(body.customTestName || existing?.customTestName || "").trim(),
     category: validateEnum("Category", body.category, categories, existing?.category || categories[0]),
@@ -208,6 +222,7 @@ function createResult(body: Record<string, unknown>, projectId: string, existing
     evidenceUrl: String(body.evidenceUrl || existing?.evidenceUrl || "").trim(),
     recommendation: String(body.recommendation || existing?.recommendation || "").trim(),
     retestStatus: validateEnum("Retest status", body.retestStatus, retestStatuses, existing?.retestStatus || "Not Retested"),
+    mitigationNotes: String(body.mitigationNotes || existing?.mitigationNotes || "").trim(),
     testerNotes: String(body.testerNotes || existing?.testerNotes || "").trim(),
     dateTested: String(body.dateTested || existing?.dateTested || now.slice(0, 10)),
     createdAt: existing?.createdAt || now,
@@ -410,6 +425,95 @@ function createRagRun(body: Record<string, unknown>, existing?: RagRun): RagRun 
   };
 }
 
+function createSafetyCampaign(body: Record<string, unknown>, existing?: SafetyCampaign): SafetyCampaign {
+  const now = new Date().toISOString();
+  return {
+    id: existing?.id || randomUUID(),
+    name: requiredTextField("Campaign name", body.name, existing?.name, 160),
+    targetSystem: requiredTextField("Target app/system", body.targetSystem, existing?.targetSystem, 160),
+    modelVersion: requiredTextField("Model/app version", body.modelVersion, existing?.modelVersion, 120),
+    environment: validateEnum("Environment", body.environment, safetyEnvironments, existing?.environment || "Staging"),
+    objective: requiredTextField("Assessment objective", body.objective, existing?.objective, 2000),
+    scope: requiredTextField("Scope", body.scope, existing?.scope, 2000),
+    outOfScope: textField("Out of scope", body.outOfScope, existing?.outOfScope, 2000),
+    testerName: requiredTextField("Tester name", body.testerName, existing?.testerName, 160),
+    assessmentDate: String(body.assessmentDate || existing?.assessmentDate || now.slice(0, 10)),
+    status: validateEnum("Campaign status", body.status, safetyCampaignStatuses, existing?.status || "Draft"),
+    authorizationConfirmed: body.authorizationConfirmed === true || body.authorizationConfirmed === "true",
+    notes: textField("Notes", body.notes, existing?.notes, 2000),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function createSafetyTemplate(body: Record<string, unknown>, existing?: SafetyTemplate): SafetyTemplate {
+  const now = new Date().toISOString();
+  return {
+    id: existing?.id || randomUUID(),
+    name: requiredTextField("Template name", body.name, existing?.name, 160),
+    description: textField("Description", body.description, existing?.description, 1000),
+    safetyTestType: validateEnum("Safety test type", body.safetyTestType, safetyTestTypes, existing?.safetyTestType),
+    category: validateEnum("Category", body.category, categories, existing?.category),
+    owaspMapping: validateEnum("OWASP mapping", body.owaspMapping, owaspMappings, existing?.owaspMapping || "Custom / Other"),
+    severity: validateEnum("Severity", body.severity, severities, existing?.severity),
+    testPrompt: requiredTextField("Test prompt", body.testPrompt, existing?.testPrompt, 8000),
+    expectedSafeBehavior: requiredTextField("Expected safe behavior", body.expectedSafeBehavior, existing?.expectedSafeBehavior, 4000),
+    failureIndicators: requiredTextField("Failure indicators", body.failureIndicators, existing?.failureIndicators, 4000),
+    evaluationCriteria: textField("Evaluation criteria", body.evaluationCriteria, existing?.evaluationCriteria, 4000),
+    passCondition: textField("Pass condition", body.passCondition, existing?.passCondition, 2000),
+    partialCondition: textField("Partial condition", body.partialCondition, existing?.partialCondition, 2000),
+    failCondition: textField("Fail condition", body.failCondition, existing?.failCondition, 2000),
+    recommendedMitigation: requiredTextField("Recommended mitigation", body.recommendedMitigation, existing?.recommendedMitigation, 4000),
+    tags: splitTags(body.tags ?? existing?.tags ?? []),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function createSafetyRun(body: Record<string, unknown>, existing?: SafetyRun): SafetyRun {
+  const now = new Date().toISOString();
+  const severity = validateEnum("Severity", body.severity, severities, existing?.severity);
+  const likelihood = validateEnum("Likelihood", body.likelihood, likelihoods, existing?.likelihood || "Medium");
+  const impact = validateEnum("Impact", body.impact, impacts, existing?.impact || "Medium");
+  const resultStatus = validateEnum("Result status", body.resultStatus, resultStatuses, existing?.resultStatus || "Not Tested");
+  const observedResponse = textField("Observed response", body.observedResponse, existing?.observedResponse, 12000);
+  if (["Passed", "Failed", "Partial"].includes(resultStatus) && !observedResponse) {
+    validationError("Observed response is required when marking a safety run Passed, Failed, or Partial.");
+  }
+  return {
+    id: existing?.id || randomUUID(),
+    campaignId: requiredTextField("Campaign", body.campaignId, existing?.campaignId, 160),
+    projectId: String(body.projectId || existing?.projectId || ""),
+    testResultId: String(body.testResultId || existing?.testResultId || ""),
+    templateId: String(body.templateId || existing?.templateId || ""),
+    name: requiredTextField("Test name", body.name, existing?.name, 160),
+    safetyTestType: validateEnum("Safety test type", body.safetyTestType, safetyTestTypes, existing?.safetyTestType),
+    category: validateEnum("Category", body.category, categories, existing?.category),
+    owaspMapping: validateEnum("OWASP mapping", body.owaspMapping, owaspMappings, existing?.owaspMapping || "Custom / Other"),
+    severity,
+    testPrompt: requiredTextField("Test prompt", body.testPrompt, existing?.testPrompt, 8000),
+    expectedSafeBehavior: requiredTextField("Expected safe behavior", body.expectedSafeBehavior, existing?.expectedSafeBehavior, 4000),
+    failureIndicators: requiredTextField("Failure indicators", body.failureIndicators, existing?.failureIndicators, 4000),
+    evaluationCriteria: textField("Evaluation criteria", body.evaluationCriteria, existing?.evaluationCriteria, 4000),
+    observedResponse,
+    resultStatus,
+    likelihood,
+    impact,
+    riskScore: calculateFindingRiskScore(severity, likelihood, impact, resultStatus),
+    evidenceNotes: textField("Evidence notes", body.evidenceNotes, existing?.evidenceNotes, 4000),
+    recommendation: textField("Recommendation", body.recommendation, existing?.recommendation, 4000),
+    retestStatus: validateEnum("Retest status", body.retestStatus, safetyRetestStatuses, existing?.retestStatus || "Not Retested"),
+    mitigationApplied: textField("Mitigation applied", body.mitigationApplied, existing?.mitigationApplied, 4000),
+    retestObservedResponse: textField("Retest observed response", body.retestObservedResponse, existing?.retestObservedResponse, 8000),
+    retestNotes: textField("Retest notes", body.retestNotes, existing?.retestNotes, 4000),
+    retestDate: String(body.retestDate || existing?.retestDate || ""),
+    testerNotes: textField("Tester notes", body.testerNotes, existing?.testerNotes, 4000),
+    dateTested: String(body.dateTested || existing?.dateTested || now.slice(0, 10)),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+}
+
 function requireKnownScenario(db: Awaited<ReturnType<typeof readDb>>, scenarioId: string) {
   if (!scenarioId) return;
   if (!db.promptInjectionScenarios.some((scenario) => scenario.id === scenarioId)) {
@@ -498,6 +602,71 @@ function resultFromRagRun(run: RagRun, projectId: string, existing?: TestResult)
   );
 }
 
+function resultFromSafetyRun(run: SafetyRun, campaign: SafetyCampaign, projectId: string, existing?: TestResult): TestResult {
+  return createResult(
+    {
+      source: "Jailbreak & Safety Regression Lab",
+      safetyRunId: run.id,
+      safetyCampaignId: campaign.id,
+      campaignName: campaign.name,
+      targetSystem: campaign.targetSystem,
+      modelVersion: campaign.modelVersion,
+      safetyTestType: run.safetyTestType,
+      expectedSafeBehavior: run.expectedSafeBehavior,
+      evaluationCriteria: run.evaluationCriteria,
+      customTestName: run.name,
+      category: run.category,
+      owaspMapping: run.owaspMapping,
+      severity: run.severity,
+      actualPrompt: run.testPrompt,
+      modelResponse: run.observedResponse,
+      resultStatus: run.resultStatus,
+      likelihood: run.likelihood,
+      impact: run.impact,
+      evidenceNotes: run.evidenceNotes,
+      recommendation: run.recommendation,
+      retestStatus: run.retestStatus,
+      mitigationNotes: [run.mitigationApplied, run.retestNotes].filter(Boolean).join("\n\n"),
+      testerNotes: run.testerNotes,
+      dateTested: run.dateTested
+    },
+    projectId,
+    existing
+  );
+}
+
+function safetyCampaignSummary(campaign: SafetyCampaign, runs: SafetyRun[]) {
+  const campaignRuns = runs.filter((run) => run.campaignId === campaign.id);
+  const completed = campaignRuns.filter((run) => ["Passed", "Failed", "Partial"].includes(run.resultStatus));
+  const passed = campaignRuns.filter((run) => run.resultStatus === "Passed").length;
+  const failed = campaignRuns.filter((run) => run.resultStatus === "Failed").length;
+  const partial = campaignRuns.filter((run) => run.resultStatus === "Partial").length;
+  const notTested = campaignRuns.filter((run) => run.resultStatus === "Not Tested").length;
+  const highCriticalFailures = campaignRuns.filter(
+    (run) => run.resultStatus === "Failed" && ["High", "Critical"].includes(run.severity)
+  ).length;
+  const safeResults = passed + partial * 0.5;
+  const refusalConsistencyScore = completed.length ? Math.round((safeResults / completed.length) * 100) : 0;
+  const averageRiskScore = completed.length
+    ? Math.round((completed.reduce((sum, run) => sum + run.riskScore, 0) / completed.length) * 10) / 10
+    : 0;
+  return {
+    ...campaign,
+    totalTests: campaignRuns.length,
+    completedTests: completed.length,
+    passed,
+    failed,
+    partial,
+    notTested,
+    highCriticalFailures,
+    averageRiskScore,
+    refusalConsistencyScore,
+    fixed: campaignRuns.filter((run) => run.retestStatus === "Fixed").length,
+    stillFailing: campaignRuns.filter((run) => run.retestStatus === "Still Failing").length,
+    partiallyFixed: campaignRuns.filter((run) => run.retestStatus === "Partially Fixed").length
+  };
+}
+
 function projectSummary(project: Project, results: TestResult[]) {
   const projectResults = results.filter((result) => result.projectId === project.id);
   const score = calculateProjectRiskScore(projectResults);
@@ -536,7 +705,11 @@ app.get("/api/workbench", async (_req, res) => {
       ragRiskTypes,
       ragSourceTypes,
       ragTrustLevels,
-      ragRiskLabels
+      ragRiskLabels,
+      safetyCampaignStatuses,
+      safetyEnvironments,
+      safetyTestTypes,
+      safetyRetestStatuses
     }
   });
 });
@@ -754,6 +927,12 @@ app.post("/api/projects/:id/add-tests", async (req, res) => {
       source: "Test Library",
       playgroundRunId: "",
       ragRunId: "",
+      safetyRunId: "",
+      safetyCampaignId: "",
+      campaignName: "",
+      targetSystem: "",
+      modelVersion: "",
+      safetyTestType: "",
       scenarioType: "",
       ragRiskType: "",
       systemPrompt: "",
@@ -761,6 +940,7 @@ app.post("/api/projects/:id/add-tests", async (req, res) => {
       retrievedContextSummary: "",
       untrustedChunksSummary: "",
       userQuestion: "",
+      expectedSafeBehavior: test.expectedBehavior,
       evaluationCriteria: test.evaluationCriteria,
       customTestName: "",
       category: test.category,
@@ -776,6 +956,7 @@ app.post("/api/projects/:id/add-tests", async (req, res) => {
       evidenceUrl: "",
       recommendation: test.recommendedMitigation,
       retestStatus: "Not Retested",
+      mitigationNotes: "",
       testerNotes: "",
       dateTested: now.slice(0, 10),
       createdAt: now,
@@ -1238,6 +1419,252 @@ app.post("/api/rag/runs/:id/save-to-project", async (req, res) => {
   project.updatedAt = run.updatedAt;
   await writeDb(db);
   res.status(201).json({ run, result, project: projectSummary(project, db.testResults) });
+});
+
+app.get("/api/safety/campaigns", async (_req, res) => {
+  const db = await readDb();
+  res.json(db.safetyCampaigns.map((campaign) => safetyCampaignSummary(campaign, db.safetyRuns)));
+});
+
+app.post("/api/safety/campaigns", async (req, res) => {
+  const missing = requireFields(req.body || {}, ["name", "targetSystem", "modelVersion", "objective", "scope", "testerName"]);
+  if (missing.length > 0) {
+    res.status(400).json({ error: `Missing required fields: ${missing.join(", ")}` });
+    return;
+  }
+  if (req.body?.authorizationConfirmed !== true && req.body?.authorizationConfirmed !== "true") {
+    res.status(400).json({ error: "Authorization confirmation is required." });
+    return;
+  }
+  const db = await readDb();
+  let campaign: SafetyCampaign;
+  try {
+    campaign = createSafetyCampaign(req.body || {});
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.safetyCampaigns.unshift(campaign);
+  await writeDb(db);
+  res.status(201).json(campaign);
+});
+
+app.get("/api/safety/campaigns/:id", async (req, res) => {
+  const db = await readDb();
+  const campaign = db.safetyCampaigns.find((item) => item.id === req.params.id);
+  if (!campaign) {
+    res.status(404).json({ error: "Safety campaign not found" });
+    return;
+  }
+  res.json({
+    campaign: safetyCampaignSummary(campaign, db.safetyRuns),
+    runs: db.safetyRuns.filter((run) => run.campaignId === campaign.id),
+    templates: db.safetyTemplates
+  });
+});
+
+app.put("/api/safety/campaigns/:id", async (req, res) => {
+  const db = await readDb();
+  const index = db.safetyCampaigns.findIndex((campaign) => campaign.id === req.params.id);
+  if (index === -1) {
+    res.status(404).json({ error: "Safety campaign not found" });
+    return;
+  }
+  if (req.body?.authorizationConfirmed !== true && req.body?.authorizationConfirmed !== "true") {
+    res.status(400).json({ error: "Authorization confirmation is required." });
+    return;
+  }
+  let campaign: SafetyCampaign;
+  try {
+    campaign = createSafetyCampaign(req.body || {}, db.safetyCampaigns[index]);
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.safetyCampaigns[index] = campaign;
+  await writeDb(db);
+  res.json(safetyCampaignSummary(campaign, db.safetyRuns));
+});
+
+app.get("/api/safety/templates", async (_req, res) => {
+  const db = await readDb();
+  res.json(db.safetyTemplates);
+});
+
+app.post("/api/safety/templates", async (req, res) => {
+  const missing = requireFields(req.body || {}, [
+    "name",
+    "safetyTestType",
+    "category",
+    "severity",
+    "testPrompt",
+    "expectedSafeBehavior",
+    "failureIndicators",
+    "recommendedMitigation"
+  ]);
+  if (missing.length > 0) {
+    res.status(400).json({ error: `Missing required fields: ${missing.join(", ")}` });
+    return;
+  }
+  const db = await readDb();
+  let template: SafetyTemplate;
+  try {
+    template = createSafetyTemplate(req.body || {});
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.safetyTemplates.unshift(template);
+  await writeDb(db);
+  res.status(201).json(template);
+});
+
+app.post("/api/safety/campaigns/:id/runs/from-template", async (req, res) => {
+  const db = await readDb();
+  const campaign = db.safetyCampaigns.find((item) => item.id === req.params.id);
+  const template = db.safetyTemplates.find((item) => item.id === String(req.body?.templateId || ""));
+  if (!campaign) {
+    res.status(404).json({ error: "Safety campaign not found" });
+    return;
+  }
+  if (!template) {
+    res.status(404).json({ error: "Safety template not found" });
+    return;
+  }
+  const now = new Date().toISOString();
+  const run: SafetyRun = {
+    id: randomUUID(),
+    campaignId: campaign.id,
+    projectId: "",
+    testResultId: "",
+    templateId: template.id,
+    name: template.name,
+    safetyTestType: template.safetyTestType,
+    category: template.category,
+    owaspMapping: template.owaspMapping,
+    severity: template.severity,
+    testPrompt: template.testPrompt,
+    expectedSafeBehavior: template.expectedSafeBehavior,
+    failureIndicators: template.failureIndicators,
+    evaluationCriteria: template.evaluationCriteria,
+    observedResponse: "",
+    resultStatus: "Not Tested",
+    likelihood: "Medium",
+    impact: "Medium",
+    riskScore: 0,
+    evidenceNotes: "",
+    recommendation: template.recommendedMitigation,
+    retestStatus: "Not Retested",
+    mitigationApplied: "",
+    retestObservedResponse: "",
+    retestNotes: "",
+    retestDate: "",
+    testerNotes: "",
+    dateTested: now.slice(0, 10),
+    createdAt: now,
+    updatedAt: now
+  };
+  db.safetyRuns.unshift(run);
+  campaign.updatedAt = now;
+  await writeDb(db);
+  res.status(201).json(run);
+});
+
+app.post("/api/safety/runs", async (req, res) => {
+  const db = await readDb();
+  if (!db.safetyCampaigns.some((campaign) => campaign.id === String(req.body?.campaignId || ""))) {
+    res.status(400).json({ error: "Campaign ID must exist before saving a safety run." });
+    return;
+  }
+  let run: SafetyRun;
+  try {
+    run = createSafetyRun(req.body || {});
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.safetyRuns.unshift(run);
+  const campaign = db.safetyCampaigns.find((item) => item.id === run.campaignId);
+  if (campaign) campaign.updatedAt = run.updatedAt;
+  await writeDb(db);
+  res.status(201).json(run);
+});
+
+app.put("/api/safety/runs/:id", async (req, res) => {
+  const db = await readDb();
+  const index = db.safetyRuns.findIndex((run) => run.id === req.params.id);
+  if (index === -1) {
+    res.status(404).json({ error: "Safety run not found" });
+    return;
+  }
+  if (!db.safetyCampaigns.some((campaign) => campaign.id === String(req.body?.campaignId || db.safetyRuns[index].campaignId))) {
+    res.status(400).json({ error: "Campaign ID must exist before saving a safety run." });
+    return;
+  }
+  let run: SafetyRun;
+  try {
+    run = createSafetyRun(req.body || {}, db.safetyRuns[index]);
+  } catch (error) {
+    if (handleValidation(error, res)) return;
+    throw error;
+  }
+  db.safetyRuns[index] = run;
+  const campaign = db.safetyCampaigns.find((item) => item.id === run.campaignId);
+  if (campaign) campaign.updatedAt = run.updatedAt;
+  await writeDb(db);
+  res.json(run);
+});
+
+app.post("/api/safety/campaigns/:id/save-to-project", async (req, res) => {
+  const db = await readDb();
+  const campaign = db.safetyCampaigns.find((item) => item.id === req.params.id);
+  const project = db.projects.find((item) => item.id === String(req.body?.projectId || ""));
+  if (!campaign) {
+    res.status(404).json({ error: "Safety campaign not found" });
+    return;
+  }
+  if (!project) {
+    res.status(400).json({ error: "Select an existing project before saving Safety Lab findings." });
+    return;
+  }
+  const mode = String(req.body?.mode || "findings");
+  const selectedRunIds = Array.isArray(req.body?.selectedRunIds)
+    ? new Set(req.body.selectedRunIds.map((id: unknown) => String(id)))
+    : new Set<string>();
+  const runs = db.safetyRuns
+    .filter((run) => run.campaignId === campaign.id)
+    .filter((run) => selectedRunIds.size === 0 || selectedRunIds.has(run.id))
+    .filter((run) =>
+      mode === "completed"
+        ? ["Passed", "Failed", "Partial"].includes(run.resultStatus)
+        : ["Failed", "Partial"].includes(run.resultStatus)
+    );
+  if (runs.length === 0) {
+    res.status(400).json({
+      error:
+        selectedRunIds.size > 0
+          ? "Select at least one completed Safety Lab run to save."
+          : "No Safety Lab findings are available to save for this campaign."
+    });
+    return;
+  }
+  const saved: TestResult[] = [];
+  for (const run of runs) {
+    const existingIndex = db.testResults.findIndex(
+      (result) => result.safetyRunId === run.id && result.projectId === project.id
+    );
+    const existing = existingIndex === -1 ? undefined : db.testResults[existingIndex];
+    const result = resultFromSafetyRun(run, campaign, project.id, existing);
+    if (existingIndex === -1) db.testResults.push(result);
+    else db.testResults[existingIndex] = result;
+    run.projectId = project.id;
+    run.testResultId = result.id;
+    run.updatedAt = new Date().toISOString();
+    saved.push(result);
+  }
+  project.updatedAt = new Date().toISOString();
+  await writeDb(db);
+  res.status(201).json({ saved, project: projectSummary(project, db.testResults) });
 });
 
 app.post("/api/projects/:id/results", async (req, res) => {

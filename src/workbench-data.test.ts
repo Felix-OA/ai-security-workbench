@@ -19,6 +19,17 @@ test("seed data includes defensive RAG Attack Lab scenarios", () => {
   assert.ok(db.ragScenarios.some((scenario) => scenario.retrievedChunks.some((chunk) => chunk.trustLevel === "Untrusted")));
 });
 
+test("seed data includes Safety Lab campaign, templates, and mixed regression runs", () => {
+  const db = createSeedWorkbenchDb();
+  assert.equal(db.safetyTemplates.length, 8);
+  assert.equal(db.safetyCampaigns.length, 1);
+  assert.equal(db.safetyRuns.filter((run) => run.resultStatus === "Passed").length, 3);
+  assert.equal(db.safetyRuns.filter((run) => run.resultStatus === "Failed").length, 2);
+  assert.equal(db.safetyRuns.filter((run) => run.resultStatus === "Partial").length, 2);
+  assert.equal(db.safetyRuns.filter((run) => run.resultStatus === "Not Tested").length, 1);
+  assert.ok(db.testResults.some((result) => result.source === "Jailbreak & Safety Regression Lab"));
+});
+
 test("seeded result scores stay aligned with scoring utility", () => {
   const db = createSeedWorkbenchDb();
   for (const result of db.testResults) {

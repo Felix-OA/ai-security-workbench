@@ -25,7 +25,7 @@ export function renderLanding() {
       </div>
       <div class="notice">For authorized testing only. Use this tool only on systems you own or have explicit permission to test.</div>
       <div class="grid">
-        ${["Red Team Test Library", "Prompt Injection Playground", "RAG Attack Lab", "Report Generator"]
+        ${["Red Team Test Library", "Prompt Injection Playground", "RAG Attack Lab", "Jailbreak & Safety Regression Lab", "Report Generator"]
           .map(
             (title) => `<article class="card module-card span-3"><h3>${title}</h3><p>${moduleCopy(title)}</p></article>`
           )
@@ -39,6 +39,7 @@ function moduleCopy(title) {
     "Red Team Test Library": "Reusable, categorized LLM security tests mapped to common AI risk categories.",
     "Prompt Injection Playground": "Manual prompt injection scenario builder for observed-response evaluation.",
     "RAG Attack Lab": "Retrieved context simulator for document injection, source confusion, privacy, and grounding risks.",
+    "Jailbreak & Safety Regression Lab": "Campaign-style refusal boundary testing, retest tracking, and safety regression documentation.",
     "Report Generator": "Copy, download, or print structured AI Risk Snapshot reports."
   }[title];
 }

@@ -8,7 +8,10 @@ export const state = {
   promptInjectionScenarios: [],
   playgroundRuns: [],
   ragScenarios: [],
-  ragRuns: []
+  ragRuns: [],
+  safetyCampaigns: [],
+  safetyTemplates: [],
+  safetyRuns: []
 };
 
 export async function loadState() {
@@ -21,7 +24,9 @@ export async function loadState() {
     promptInjectionScenarios: data.promptInjectionScenarios || [],
     playgroundRuns: data.playgroundRuns || [],
     ragScenarios: data.ragScenarios || [],
-    ragRuns: data.ragRuns || []
+    ragRuns: data.ragRuns || [],
+    safetyCampaigns: data.safetyCampaigns || [],
+    safetyTemplates: data.safetyTemplates || [],
+    safetyRuns: data.safetyRuns || []
   });
 }
-

@@ -4,7 +4,7 @@ A local web app for documenting authorized LLM red team tests, scoring findings,
 
 ## Overview
 
-**AI Security Workbench** is a defensive portfolio project for structured AI security assessments. Module 1, **Red Team Test Library + Report Generator**, helps users manage reusable LLM security tests, attach them to assessment projects, record manual results, score risk, and export a professional Markdown report. Module 2, **Prompt Injection Playground**, adds a controlled simulator for documenting authorized prompt injection scenarios and saving findings into project reports. Module 3, **RAG Attack Lab**, adds a retrieval-risk workspace for documenting trusted and untrusted context behavior in RAG systems.
+**AI Security Workbench** is a defensive portfolio project for structured AI security assessments. Module 1, **Red Team Test Library + Report Generator**, helps users manage reusable LLM security tests, attach them to assessment projects, record manual results, score risk, and export a professional Markdown report. Module 2, **Prompt Injection Playground**, adds a controlled simulator for documenting authorized prompt injection scenarios and saving findings into project reports. Module 3, **RAG Attack Lab**, adds a retrieval-risk workspace for documenting trusted and untrusted context behavior in RAG systems. Module 4, **Jailbreak & Safety Regression Lab**, adds campaign-style safety-boundary testing, refusal consistency tracking, and retest documentation.
 
 ## Who It Is For
 
@@ -20,9 +20,10 @@ A local web app for documenting authorized LLM red team tests, scoring findings,
 - Test result workflow for prompt/input, observed response, status, likelihood, impact, evidence, recommendations, and retest status.
 - Prompt Injection Playground with scenario templates, system prompt/intended behavior setup, user prompt input, simulated retrieved context, manual observed response capture, live risk preview, and save-to-project flow.
 - RAG Attack Lab with scenario builder, retrieved context simulator, trust level and risk labels, manual observed response capture, live risk preview, and save-to-project flow.
+- Jailbreak & Safety Regression Lab with safety campaign builder, reusable templates, refusal consistency score, retest workflow, live risk preview, and save-to-project flow.
 - Project and portfolio dashboards with risk scores, status distribution, severity distribution, category breakdown, and top findings.
 - AI Risk Snapshot report generator with rendered browser preview, copy Markdown, download Markdown, and print support.
-- Seeded demo data with 15 AI security test cases, 8 prompt injection scenarios, 6 RAG Lab scenarios, and a sample customer support assistant assessment.
+- Seeded demo data with 15 AI security test cases, 8 prompt injection scenarios, 6 RAG Lab scenarios, 8 Safety Lab templates, a Safety Lab campaign, and a sample customer support assistant assessment.
 
 OWASP-style mappings use 2025 GenAI/LLM Top 10-style labels for practical guidance. Review mappings against the latest OWASP GenAI Top 10 before using the output in a formal assessment.
 
@@ -60,6 +61,23 @@ Key features:
 - Save scenario as reusable test case.
 - Report generator integration with `Source: RAG Attack Lab`.
 
+## Module 4: Jailbreak & Safety Regression Lab
+
+The Jailbreak & Safety Regression Lab helps document authorized safety-boundary testing, refusal consistency, jailbreak resistance, retesting after mitigations, and safety regression findings.
+
+Key features:
+
+- Safety campaign builder.
+- Reusable safety test templates.
+- Refusal boundary testing.
+- Instruction hierarchy testing.
+- System prompt leakage attempts.
+- Multi-turn escalation documentation.
+- Retest workflow.
+- Refusal consistency score.
+- Save to project.
+- Report generator integration with `Source: Jailbreak & Safety Regression Lab`.
+
 ## Demo Workflow
 
 1. Open the dashboard.
@@ -73,9 +91,11 @@ Key features:
 9. Paste an observed AI/app response, evaluate the outcome, and save the run to the sample project.
 10. Open the RAG Attack Lab and load `Malicious Warranty Document Instruction`.
 11. Review trusted and untrusted retrieved chunks, paste an observed AI/app response, evaluate the outcome, and save the run to the sample project.
-12. Open the project dashboard.
-13. Generate the AI Risk Snapshot report.
-14. Copy or download the Markdown report.
+12. Open the Safety Lab and load the demo safety campaign.
+13. Review seeded refusal-boundary tests, paste an observed response, evaluate the outcome, and save Safety Lab findings to the sample project.
+14. Open the project dashboard.
+15. Generate the AI Risk Snapshot report.
+16. Copy or download the Markdown report.
 
 ## Tech Stack
 
@@ -84,7 +104,7 @@ Key features:
 - TypeScript
 - Vanilla HTML/CSS/JavaScript frontend
 - Local JSON persistence in `data/db.json`
-- Node test runner for scoring, seed data, reports, and Playground save flows
+- Node test runner for scoring, seed data, reports, Playground, RAG Lab, and Safety Lab save flows
 
 This v1 intentionally keeps the current lightweight architecture. A future version can migrate to Next.js, Prisma, SQLite, and a component framework after the product workflow is stable.
 
@@ -111,8 +131,10 @@ The seed creates:
 - 15 reusable AI red team test cases.
 - 8 prompt injection playground scenarios.
 - 6 RAG Attack Lab scenarios.
+- 8 Safety Lab templates.
+- 1 Safety Lab demo campaign with mixed passed, failed, partial, and not-tested runs.
 - 1 demo project: `Demo Assessment - Customer Support AI Assistant`.
-- 8 attached test results with passed, failed, and partial outcomes.
+- Attached project results with Test Library, Playground, RAG Lab, and Safety Lab sources.
 
 The in-app **Reset Demo Data** action is intended for local demos. It is disabled in production unless `ALLOW_DEMO_RESET=true` is explicitly set.
 
@@ -236,4 +258,6 @@ npm run typecheck
 - Test library versioning.
 - Optional model API integration for authorized local evaluations.
 - RAG Attack Lab Module 3.1 polish: richer citations, chunk import/export, and retrieval relevance scoring.
+- Safety Lab Module 4.1 polish: richer campaign comparison, import/export, and version-to-version regression charts.
+- AI Security Dashboard improvements.
 - Multi-user workspaces.
