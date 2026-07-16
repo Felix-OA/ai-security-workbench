@@ -8,6 +8,7 @@ import { badge } from "../components/badges.js";
 import { optionList } from "../components/forms.js";
 import { table } from "../components/tables.js";
 import { ragScenarioName } from "../names.js";
+import { sourceBadgeLabel } from "../source-labels.js";
 
 export function blankRagChunk() {
   return {
@@ -377,7 +378,7 @@ export function renderRagLab() {
               <button type="button" class="secondary" data-action="save-current-rag-scenario-test" title="Add this scenario to the Red Team Test Library.">Save as Reusable Test Case</button>
             </div>
           </div>
-          <div class="notice notice-compact">Saved project findings are marked ${badge("Source: RAG Attack Lab", "neutral")} in project results and reports.</div>
+          <div class="notice notice-compact">Saved project findings are marked ${badge(sourceBadgeLabel("RAG Attack Lab"), "neutral")} in project results and reports.</div>
         </article>
       </aside>
     </form>`;

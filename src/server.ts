@@ -19,6 +19,8 @@ import {
 } from "./store.js";
 import { generateRiskSnapshotReport } from "./report-generator.js";
 import { calculateFindingRiskScore, calculateProjectRiskScore, getRiskLevel } from "./scoring.js";
+import { registerWorkbenchRoutes } from "./routes/workbench-routes.js";
+import { sourceLabel, sourceValues } from "./source-labels.js";
 import {
   aiSystemTypes,
   categories,
@@ -47,10 +49,7 @@ const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(process.cwd(), "public")));
-
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
-});
+registerWorkbenchRoutes(app);
 
 function splitTags(value: unknown) {
   if (Array.isArray(value)) return value.map((tag) => String(tag).trim()).filter(Boolean);
@@ -182,12 +181,13 @@ function createResult(body: Record<string, unknown>, projectId: string, existing
   const likelihood = validateEnum("Likelihood", body.likelihood, likelihoods, existing?.likelihood || "Medium");
   const impact = validateEnum("Impact", body.impact, impacts, existing?.impact || "Medium");
   const resultStatus = validateEnum("Result status", body.resultStatus, resultStatuses, existing?.resultStatus || "Not Tested");
+  const rawSource = String(body.source || existing?.source || "");
   return {
     id: existing?.id || randomUUID(),
     projectId,
     testCaseId: String(body.testCaseId ?? existing?.testCaseId ?? ""),
-    source: (["Test Library", "Prompt Injection Playground", "RAG Attack Lab", "Jailbreak & Safety Regression Lab", "Custom"].includes(String(body.source || existing?.source || ""))
-      ? String(body.source || existing?.source)
+    source: (sourceValues.includes(rawSource as TestResult["source"])
+      ? sourceLabel(rawSource)
       : existing?.testCaseId || body.testCaseId
         ? "Test Library"
         : "Custom") as TestResult["source"],
@@ -684,45 +684,6 @@ async function ensureRagSeedScenarios(db: Awaited<ReturnType<typeof readDb>>) {
   db.ragScenarios = createSeedWorkbenchDb().ragScenarios;
   await writeDb(db);
 }
-
-app.get("/api/workbench", async (_req, res) => {
-  const db = await readDb();
-  await ensureRagSeedScenarios(db);
-  res.json({
-    ...db,
-    constants: {
-      categories,
-      owaspMappings,
-      severities,
-      testTypes,
-      resultStatuses,
-      likelihoods,
-      impacts,
-      retestStatuses,
-      projectStatuses,
-      aiSystemTypes,
-      scenarioTypes,
-      ragRiskTypes,
-      ragSourceTypes,
-      ragTrustLevels,
-      ragRiskLabels,
-      safetyCampaignStatuses,
-      safetyEnvironments,
-      safetyTestTypes,
-      safetyRetestStatuses
-    }
-  });
-});
-
-app.post("/api/workbench/seed", async (_req, res) => {
-  if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_RESET !== "true") {
-    res.status(403).json({ error: "Demo data reset is disabled in production." });
-    return;
-  }
-  const db = createSeedWorkbenchDb();
-  await writeDb(db);
-  res.json({ ...db, demoOnly: true });
-});
 
 app.get("/api/tests", async (_req, res) => {
   const db = await readDb();

@@ -11,13 +11,11 @@ import { optionList, errorBox } from "../components/forms.js";
 import { table } from "../components/tables.js";
 import { stat, countsBy, chart, riskMeter } from "../components/cards.js";
 import { testName } from "../names.js";
+import { sourceBadgeLabel } from "../source-labels.js";
 import { renderNotFound } from "./static-pages.js";
 
 function sourceBadge(result) {
-  if (result.source === "Prompt Injection Playground") return badge("Source: Prompt Injection Playground", "neutral");
-  if (result.source === "RAG Attack Lab") return badge("Source: RAG Attack Lab", "neutral");
-  if (result.source === "Jailbreak & Safety Regression Lab") return badge("Source: Jailbreak & Safety Regression Lab", "neutral");
-  return "";
+  return result.source && result.source !== "Test Library" ? badge(sourceBadgeLabel(result.source), "neutral") : "";
 }
 
 export function renderProjects() {

@@ -8,6 +8,7 @@ import { badge } from "../components/badges.js";
 import { optionList } from "../components/forms.js";
 import { table } from "../components/tables.js";
 import { scenarioName } from "../names.js";
+import { sourceBadgeLabel } from "../source-labels.js";
 
 export function playgroundDefaults() {
   return {
@@ -261,7 +262,7 @@ export function renderPlayground() {
               <button type="button" class="secondary" data-action="save-current-scenario-test" title="Add this scenario to the Red Team Test Library.">Save as Reusable Test Case</button>
             </div>
           </div>
-          <div class="notice notice-compact">Saved project findings are marked ${badge("Source: Playground", "neutral")} in project results and reports.</div>
+          <div class="notice notice-compact">Saved project findings are marked ${badge(sourceBadgeLabel("Prompt Injection Playground"), "neutral")} in project results and reports.</div>
         </article>
       </aside>
     </form>`;
@@ -282,4 +283,3 @@ export function updatePlaygroundRiskPreview() {
   const level = riskLevel(Math.round((score / 22.5) * 100));
   document.getElementById("pg-risk-level").innerHTML = badge(level, level);
 }
-

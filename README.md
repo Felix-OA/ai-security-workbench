@@ -222,8 +222,8 @@ A few key screens are grouped by module below. Expand each section to view the s
 #### Failed Evaluation with Live Risk Score
 ![Failed Evaluation with Live Risk Score](docs/screenshots/module-2/03-failed-evaluation-risk-score.png)
 
-#### Project Result Showing Source: Playground
-![Project Result Showing Source Playground](docs/screenshots/module-2/04-project-result-source-playground.png)
+#### Project Result Showing Source: Prompt Injection Playground
+![Project Result Showing Source Prompt Injection Playground](docs/screenshots/module-2/04-project-result-source-playground.png)
 
 #### Report Preview Showing Source: Prompt Injection Playground
 ![Report Preview Showing Source Prompt Injection Playground](docs/screenshots/module-2/05-report-source-prompt-injection-playground.png)

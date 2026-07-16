@@ -1,4 +1,5 @@
 import { calculateProjectRiskScore, getRiskLevel, isCompletedResult } from "./scoring.js";
+import { sourceLabel, sourceLine } from "./source-labels.js";
 import type { Project, TestCase, TestResult } from "./store.js";
 
 function clean(value: string | undefined, fallback = "Not documented") {
@@ -62,18 +63,18 @@ function recommendationLines(results: TestResult[], tests: TestCase[]) {
 
 function sourceContext(result: TestResult) {
   if (result.source === "Prompt Injection Playground") {
-    return `Source: Prompt Injection Playground
+    return `${sourceLine(result.source)}
 Scenario Type: ${clean(result.scenarioType)}
 
 System Prompt / Intended Behavior:
-${clean(result.systemPrompt)}
+${fencedTextBlock(result.systemPrompt)}
 
 Retrieved Context Summary:
-${clean(result.retrievedContext, "No retrieved context documented.")}
+${fencedTextBlock(clean(result.retrievedContext, "No retrieved context documented."))}
 `;
   }
   if (result.source === "RAG Attack Lab") {
-    return `Source: RAG Attack Lab
+    return `${sourceLine(result.source)}
 RAG Risk Type: ${clean(result.ragRiskType)}
 
 System Prompt / Intended Behavior:
@@ -90,7 +91,7 @@ ${safeRagContext(result.untrustedChunksSummary, "No untrusted or risky retrieved
 `;
   }
   if (result.source === "Jailbreak & Safety Regression Lab") {
-    return `Source: Jailbreak & Safety Regression Lab
+    return `${sourceLine(result.source)}
 Campaign: ${clean(result.campaignName)}
 Target app/system: ${clean(result.targetSystem)}
 Model/app version: ${clean(result.modelVersion)}
@@ -161,7 +162,7 @@ export function generateRiskSnapshotReport(project: Project, results: TestResult
   const findingRows = results
     .map((result, index) => {
       const name = testName(result, tests);
-      return `| ${tableCell(`F-${String(index + 1).padStart(3, "0")}`)} | ${tableCell(name)} | ${tableCell(result.source || "Test Library")} | ${tableCell(result.category)} | ${tableCell(result.severity)} | ${tableCell(result.resultStatus)} | ${tableCell(result.riskScore.toFixed(1))} | ${tableCell(clean(result.recommendation, "Document remediation."))} |`;
+      return `| ${tableCell(`F-${String(index + 1).padStart(3, "0")}`)} | ${tableCell(name)} | ${tableCell(sourceLabel(result.source || "Test Library"))} | ${tableCell(result.category)} | ${tableCell(result.severity)} | ${tableCell(result.resultStatus)} | ${tableCell(result.riskScore.toFixed(1))} | ${tableCell(clean(result.recommendation, "Document remediation."))} |`;
     })
     .join("\n");
 
@@ -185,10 +186,10 @@ Risk Score: ${result.riskScore.toFixed(1)}
 
 ${isSafetyLab ? "" : `Prompt/Input Used:
 
-> ${clean(result.actualPrompt)}
+${fencedTextBlock(result.actualPrompt)}
 
-Observed Response Summary:
-${clean(result.modelResponse)}
+Observed Response:
+${fencedTextBlock(result.modelResponse)}
 `}
 
 Evidence:
@@ -212,7 +213,7 @@ ${clean(result.retestStatus, "Not Retested")}`;
   const appendix = results
     .map((result) => {
       const test = tests.find((item) => item.id === result.testCaseId);
-      return `- ${testName(result, tests)} (${result.category}; ${result.source || test?.testType || "Custom test"})`;
+      return `- ${testName(result, tests)} (${result.category}; ${result.source ? sourceLabel(result.source) : test?.testType || "Custom test"})`;
     })
     .join("\n");
 

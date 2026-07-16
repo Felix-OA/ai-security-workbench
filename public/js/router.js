@@ -38,7 +38,8 @@ export async function render() {
     if (top === "about") return renderAbout();
     return renderNotFound();
   } catch (error) {
-    setTitle("Something went wrong");
+    const message = error.message || "Unable to load this page.";
+    setTitle(message.toLowerCase().includes("not found") ? "Not Found" : "Unable to load page");
     app.innerHTML = errorBox(error);
   }
 }
