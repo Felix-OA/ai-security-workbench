@@ -188,7 +188,10 @@ Use this tool only on systems you own or have explicit permission to test.
 
 ## Screenshots
 
-### Module 1: Red Team Test Library + Report Generator
+A few key screens are grouped by module below. Expand each section to view the screenshots.
+
+<details>
+<summary><strong>Module 1: Red Team Test Library + Report Generator</strong></summary>
 
 #### Landing Page
 ![Landing Page](docs/screenshots/landing-page.png)
@@ -205,7 +208,10 @@ Use this tool only on systems you own or have explicit permission to test.
 #### Report Generator
 ![Report Generator](docs/screenshots/report-generator.png)
 
-### Module 2: Prompt Injection Playground
+</details>
+
+<details>
+<summary><strong>Module 2: Prompt Injection Playground</strong></summary>
 
 #### Playground Main Screen with Authorization Notice
 ![Playground Main Screen with Authorization Notice](docs/screenshots/module-2/01-playground-main-auth-notice.png)
@@ -222,7 +228,10 @@ Use this tool only on systems you own or have explicit permission to test.
 #### Report Preview Showing Source: Prompt Injection Playground
 ![Report Preview Showing Source Prompt Injection Playground](docs/screenshots/module-2/05-report-source-prompt-injection-playground.png)
 
-### Module 3: RAG Attack Lab
+</details>
+
+<details>
+<summary><strong>Module 3: RAG Attack Lab</strong></summary>
 
 #### RAG Lab Main Screen with Manual-Only Notice
 ![RAG Lab Main Screen with Manual-Only Notice](docs/screenshots/module-3/01-rag-lab-main-manual-notice.png)
@@ -241,6 +250,34 @@ Use this tool only on systems you own or have explicit permission to test.
 
 #### Report Preview Showing RAG Finding and Retrieved Context
 ![Report Preview Showing RAG Finding and Retrieved Context](docs/screenshots/module-3/06-report-rag-finding-retrieved-context.png)
+
+</details>
+
+<details>
+<summary><strong>Module 4: Jailbreak & Safety Regression Lab</strong></summary>
+
+#### Safety Lab Main Screen with Workflow Notice
+![Safety Lab Main Screen with Workflow Notice](docs/screenshots/module-4/01-safety-lab-main-workflow-notice.png)
+
+#### Demo Safety Campaign
+![Demo Safety Campaign](docs/screenshots/module-4/02-demo-safety-campaign.png)
+
+#### Roleplay Boundary Test Evaluation
+![Roleplay Boundary Test Evaluation](docs/screenshots/module-4/03-roleplay-boundary-test-evaluation.png)
+
+#### Refusal Consistency Score
+![Refusal Consistency Score](docs/screenshots/module-4/04-refusal-consistency-score.png)
+
+#### Retest and Mitigation Notes
+![Retest and Mitigation Notes](docs/screenshots/module-4/05-retest-mitigation-notes.png)
+
+#### Project Result Showing Source: Safety Lab
+![Project Result Showing Source Safety Lab](docs/screenshots/module-4/06-project-result-source-safety-lab.png)
+
+#### Report Preview Showing Safety Regression Summary
+![Report Preview Showing Safety Regression Summary](docs/screenshots/module-4/07-report-safety-regression-summary.png)
+
+</details>
 
 ## Quality Checks
 
